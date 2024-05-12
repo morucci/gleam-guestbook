@@ -1,0 +1,13 @@
+{
+	"folders": [
+		{
+			"path": "guestbook_back"
+		},
+		{
+			"path": "guestbook_front"
+		},
+		{
+			"path": "guestbook_shared"
+		}
+	]
+}
