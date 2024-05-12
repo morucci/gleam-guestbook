@@ -1,6 +1,8 @@
 import gleam/dynamic
 import gleam/int
+import gleam/io
 import gleam/list
+import guestbook_shared/message
 import lustre
 import lustre/attribute
 import lustre/effect
@@ -27,7 +29,9 @@ fn init(_flags) -> #(Model, effect.Effect(Msg)) {
 pub type Msg {
   UserIncrementedCount
   UserDecrementedCount
+  UserGetMessage
   ApiReturnedCat(Result(String, lustre_http.HttpError))
+  ApiReturnedMessage(Result(message.Message, lustre_http.HttpError))
 }
 
 pub fn update(model: Model, msg: Msg) -> #(Model, effect.Effect(Msg)) {
@@ -37,11 +41,17 @@ pub fn update(model: Model, msg: Msg) -> #(Model, effect.Effect(Msg)) {
       Model(..model, count: model.count - 1),
       effect.none(),
     )
+    UserGetMessage -> #(model, get_message())
     ApiReturnedCat(Ok(cat)) -> #(
       Model(..model, cats: [cat, ..model.cats]),
       effect.none(),
     )
     ApiReturnedCat(Error(_)) -> #(model, effect.none())
+    ApiReturnedMessage(Ok(msg)) -> {
+      io.debug(msg)
+      #(model, effect.none())
+    }
+    ApiReturnedMessage(Error(_)) -> #(model, effect.none())
   }
 }
 
@@ -52,6 +62,12 @@ fn get_cat() -> effect.Effect(Msg) {
   lustre_http.get("https://cataas.com/cat?json=true", expect)
 }
 
+fn get_message() -> effect.Effect(Msg) {
+  let decoder = message.decoder()
+  let expect = lustre_http.expect_json(decoder, ApiReturnedMessage)
+  lustre_http.get("http://localhost:8000/message/1", expect)
+}
+
 pub fn view(model: Model) -> element.Element(Msg) {
   let count = int.to_string(model.count)
 
@@ -59,6 +75,7 @@ pub fn view(model: Model) -> element.Element(Msg) {
     html.button([event.on_click(UserIncrementedCount)], [element.text("+")]),
     element.text(count),
     html.button([event.on_click(UserDecrementedCount)], [element.text("-")]),
+    html.button([event.on_click(UserGetMessage)], [element.text("get-message")]),
     html.div(
       [],
       list.map(model.cats, fn(cat) {

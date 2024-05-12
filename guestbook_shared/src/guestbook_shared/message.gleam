@@ -14,14 +14,17 @@ pub fn to_json(msg: Message) -> json.Json {
   ])
 }
 
+pub fn decoder() -> fn(dynamic.Dynamic) ->
+  Result(Message, List(dynamic.DecodeError)) {
+  dynamic.decode4(
+    Message,
+    dynamic.field("id", of: dynamic.int),
+    dynamic.field("text", of: dynamic.string),
+    dynamic.field("unix_date", of: dynamic.int),
+    dynamic.field("author", of: dynamic.string),
+  )
+}
+
 pub fn from_json(json: String) -> Result(Message, json.DecodeError) {
-  let decoder =
-    dynamic.decode4(
-      Message,
-      dynamic.field("id", of: dynamic.int),
-      dynamic.field("text", of: dynamic.string),
-      dynamic.field("unix_date", of: dynamic.int),
-      dynamic.field("author", of: dynamic.string),
-    )
-  json.decode(from: json, using: decoder)
+  json.decode(from: json, using: decoder())
 }

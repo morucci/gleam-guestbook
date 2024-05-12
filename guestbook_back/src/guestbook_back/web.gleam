@@ -1,4 +1,15 @@
+import cors_builder as cors
+import gleam/http
 import wisp
+
+fn cors() {
+  cors.new()
+  |> cors.allow_origin("http://localhost:8000")
+  |> cors.allow_origin("http://localhost:8080")
+  |> cors.allow_origin("http://localhost:1234")
+  |> cors.allow_method(http.Get)
+  |> cors.allow_method(http.Post)
+}
 
 /// The middleware stack that the request handler uses. The stack is itself a
 /// middleware function!
@@ -26,6 +37,9 @@ pub fn middleware(
 
   // Rewrite HEAD requests to GET requests and return an empty body.
   use req <- wisp.handle_head(req)
+
+  // Handle cors
+  use req <- cors.wisp_handle(req, cors())
 
   // Handle the request!
   handle_request(req)

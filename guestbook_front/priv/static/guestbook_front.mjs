@@ -108,6 +108,11 @@ var BitArray = class _BitArray {
     return new _BitArray(this.buffer.slice(index3));
   }
 };
+var UtfCodepoint = class {
+  constructor(value) {
+    this.value = value;
+  }
+};
 function byteArrayToInt(byteArray) {
   byteArray = byteArray.reverse();
   let value = 0;
@@ -1038,6 +1043,15 @@ function concat(xs) {
 function starts_with(haystack, needle) {
   return haystack.startsWith(needle);
 }
+function print_debug(string3) {
+  if (typeof process === "object" && process.stderr?.write) {
+    process.stderr.write(string3 + "\n");
+  } else if (typeof Deno === "object") {
+    Deno.stderr.writeSync(new TextEncoder().encode(string3 + "\n"));
+  } else {
+    console.log(string3);
+  }
+}
 function compile_regex(pattern, options) {
   try {
     let flags = "gu";
@@ -1137,6 +1151,83 @@ function try_get_field(value, field2, or_else) {
     return or_else();
   }
 }
+function inspect(v) {
+  const t = typeof v;
+  if (v === true)
+    return "True";
+  if (v === false)
+    return "False";
+  if (v === null)
+    return "//js(null)";
+  if (v === void 0)
+    return "Nil";
+  if (t === "string")
+    return JSON.stringify(v);
+  if (t === "bigint" || t === "number")
+    return v.toString();
+  if (Array.isArray(v))
+    return `#(${v.map(inspect).join(", ")})`;
+  if (v instanceof List)
+    return inspectList(v);
+  if (v instanceof UtfCodepoint)
+    return inspectUtfCodepoint(v);
+  if (v instanceof BitArray)
+    return inspectBitArray(v);
+  if (v instanceof CustomType)
+    return inspectCustomType(v);
+  if (v instanceof Dict)
+    return inspectDict(v);
+  if (v instanceof Set)
+    return `//js(Set(${[...v].map(inspect).join(", ")}))`;
+  if (v instanceof RegExp)
+    return `//js(${v})`;
+  if (v instanceof Date)
+    return `//js(Date("${v.toISOString()}"))`;
+  if (v instanceof Function) {
+    const args = [];
+    for (const i of Array(v.length).keys())
+      args.push(String.fromCharCode(i + 97));
+    return `//fn(${args.join(", ")}) { ... }`;
+  }
+  return inspectObject(v);
+}
+function inspectDict(map6) {
+  let body = "dict.from_list([";
+  let first2 = true;
+  map6.forEach((value, key) => {
+    if (!first2)
+      body = body + ", ";
+    body = body + "#(" + inspect(key) + ", " + inspect(value) + ")";
+    first2 = false;
+  });
+  return body + "])";
+}
+function inspectObject(v) {
+  const name = Object.getPrototypeOf(v)?.constructor?.name || "Object";
+  const props = [];
+  for (const k of Object.keys(v)) {
+    props.push(`${inspect(k)}: ${inspect(v[k])}`);
+  }
+  const body = props.length ? " " + props.join(", ") + " " : "";
+  const head = name === "Object" ? "" : name + " ";
+  return `//js(${head}{${body}})`;
+}
+function inspectCustomType(record) {
+  const props = Object.keys(record).map((label) => {
+    const value = inspect(record[label]);
+    return isNaN(parseInt(label)) ? `${label}: ${value}` : value;
+  }).join(", ");
+  return props ? `${record.constructor.name}(${props})` : record.constructor.name;
+}
+function inspectList(list) {
+  return `[${list.toArray().map(inspect).join(", ")}]`;
+}
+function inspectBitArray(bits) {
+  return `<<${Array.from(bits.buffer).join(", ")}>>`;
+}
+function inspectUtfCodepoint(codepoint2) {
+  return `//utfcodepoint(${String.fromCodePoint(codepoint2.value)})`;
+}
 
 // build/dev/javascript/gleam_stdlib/gleam/int.mjs
 function parse(string3) {
@@ -1213,6 +1304,37 @@ function do_append(loop$first, loop$second) {
 }
 function append(first2, second2) {
   return do_append(reverse(first2), second2);
+}
+function reverse_and_prepend(loop$prefix, loop$suffix) {
+  while (true) {
+    let prefix = loop$prefix;
+    let suffix = loop$suffix;
+    if (prefix.hasLength(0)) {
+      return suffix;
+    } else {
+      let first$1 = prefix.head;
+      let rest$1 = prefix.tail;
+      loop$prefix = rest$1;
+      loop$suffix = prepend(first$1, suffix);
+    }
+  }
+}
+function do_concat(loop$lists, loop$acc) {
+  while (true) {
+    let lists = loop$lists;
+    let acc = loop$acc;
+    if (lists.hasLength(0)) {
+      return reverse(acc);
+    } else {
+      let list = lists.head;
+      let further_lists = lists.tail;
+      loop$lists = further_lists;
+      loop$acc = reverse_and_prepend(list, acc);
+    }
+  }
+}
+function concat2(lists) {
+  return do_concat(lists, toList([]));
 }
 function do_repeat(loop$a, loop$times, loop$acc) {
   while (true) {
@@ -1314,9 +1436,9 @@ function any(decoders) {
         toList([new DecodeError("another type", classify(data), toList([]))])
       );
     } else {
-      let decoder = decoders.head;
+      let decoder2 = decoders.head;
       let decoders$1 = decoders.tail;
-      let $ = decoder(data);
+      let $ = decoder2(data);
       if ($.isOk()) {
         let decoded = $[0];
         return new Ok(decoded);
@@ -1326,15 +1448,23 @@ function any(decoders) {
     }
   };
 }
+function all_errors(result) {
+  if (result.isOk()) {
+    return toList([]);
+  } else {
+    let errors = result[0];
+    return errors;
+  }
+}
 function push_path(error, name) {
   let name$1 = from(name);
-  let decoder = any(
+  let decoder2 = any(
     toList([string, (x) => {
       return map3(int(x), to_string2);
     }])
   );
   let name$2 = (() => {
-    let $ = decoder(name$1);
+    let $ = decoder2(name$1);
     if ($.isOk()) {
       let name$22 = $[0];
       return name$22;
@@ -1373,6 +1503,31 @@ function field(name, inner_type) {
     );
   };
 }
+function decode4(constructor, t1, t2, t3, t4) {
+  return (x) => {
+    let $ = t1(x);
+    let $1 = t2(x);
+    let $2 = t3(x);
+    let $3 = t4(x);
+    if ($.isOk() && $1.isOk() && $2.isOk() && $3.isOk()) {
+      let a = $[0];
+      let b = $1[0];
+      let c = $2[0];
+      let d = $3[0];
+      return new Ok(constructor(a, b, c, d));
+    } else {
+      let a = $;
+      let b = $1;
+      let c = $2;
+      let d = $3;
+      return new Error(
+        concat2(
+          toList([all_errors(a), all_errors(b), all_errors(c), all_errors(d)])
+        )
+      );
+    }
+  };
+}
 
 // build/dev/javascript/gleam_stdlib/gleam/string.mjs
 function lowercase2(string3) {
@@ -1389,14 +1544,17 @@ function concat3(strings) {
 function pop_grapheme2(string3) {
   return pop_grapheme(string3);
 }
+function inspect2(term) {
+  let _pipe = inspect(term);
+  return to_string3(_pipe);
+}
 
-// build/dev/javascript/gleam_stdlib/gleam/bool.mjs
-function guard(requirement, consequence, alternative) {
-  if (requirement) {
-    return consequence;
-  } else {
-    return alternative();
-  }
+// build/dev/javascript/gleam_stdlib/gleam/io.mjs
+function debug(term) {
+  let _pipe = term;
+  let _pipe$1 = inspect2(_pipe);
+  print_debug(_pipe$1);
+  return term;
 }
 
 // build/dev/javascript/gleam_json/gleam_json_ffi.mjs
@@ -1503,11 +1661,11 @@ var UnexpectedFormat = class extends CustomType {
     this[0] = x0;
   }
 };
-function do_decode(json, decoder) {
+function do_decode(json, decoder2) {
   return then$(
     decode(json),
     (dynamic_value) => {
-      let _pipe = decoder(dynamic_value);
+      let _pipe = decoder2(dynamic_value);
       return map_error(
         _pipe,
         (var0) => {
@@ -1517,8 +1675,39 @@ function do_decode(json, decoder) {
     }
   );
 }
-function decode2(json, decoder) {
-  return do_decode(json, decoder);
+function decode2(json, decoder2) {
+  return do_decode(json, decoder2);
+}
+
+// build/dev/javascript/guestbook_shared/guestbook_shared/message.mjs
+var Message = class extends CustomType {
+  constructor(id, text2, unix_date, author) {
+    super();
+    this.id = id;
+    this.text = text2;
+    this.unix_date = unix_date;
+    this.author = author;
+  }
+};
+function decoder() {
+  return decode4(
+    (var0, var1, var2, var3) => {
+      return new Message(var0, var1, var2, var3);
+    },
+    field("id", int),
+    field("text", string),
+    field("unix_date", int),
+    field("author", string)
+  );
+}
+
+// build/dev/javascript/gleam_stdlib/gleam/bool.mjs
+function guard(requirement, consequence, alternative) {
+  if (requirement) {
+    return consequence;
+  } else {
+    return alternative();
+  }
 }
 
 // build/dev/javascript/lustre/lustre/effect.mjs
@@ -2677,7 +2866,7 @@ function response_to_result(response) {
     return new Error(new OtherError(code, body));
   }
 }
-function expect_json(decoder, to_msg) {
+function expect_json(decoder2, to_msg) {
   return new ExpectTextResponse(
     (response) => {
       let _pipe = response;
@@ -2685,7 +2874,7 @@ function expect_json(decoder, to_msg) {
       let _pipe$2 = then$(
         _pipe$1,
         (body) => {
-          let $ = decode2(body, decoder);
+          let $ = decode2(body, decoder2);
           if ($.isOk()) {
             let json = $[0];
             return new Ok(json);
@@ -2712,7 +2901,15 @@ var UserIncrementedCount = class extends CustomType {
 };
 var UserDecrementedCount = class extends CustomType {
 };
+var UserGetMessage = class extends CustomType {
+};
 var ApiReturnedCat = class extends CustomType {
+  constructor(x0) {
+    super();
+    this[0] = x0;
+  }
+};
+var ApiReturnedMessage = class extends CustomType {
   constructor(x0) {
     super();
     this[0] = x0;
@@ -2722,26 +2919,44 @@ function init2(_) {
   return [new Model(0, toList([])), none()];
 }
 function get_cat() {
-  let decoder = field("_id", string);
+  let decoder2 = field("_id", string);
   let expect = expect_json(
-    decoder,
+    decoder2,
     (var0) => {
       return new ApiReturnedCat(var0);
     }
   );
   return get2("https://cataas.com/cat?json=true", expect);
 }
+function get_message() {
+  let decoder2 = decoder();
+  let expect = expect_json(
+    decoder2,
+    (var0) => {
+      return new ApiReturnedMessage(var0);
+    }
+  );
+  return get2("http://localhost:8000/message/1", expect);
+}
 function update2(model, msg) {
   if (msg instanceof UserIncrementedCount) {
     return [model.withFields({ count: model.count + 1 }), get_cat()];
   } else if (msg instanceof UserDecrementedCount) {
     return [model.withFields({ count: model.count - 1 }), none()];
+  } else if (msg instanceof UserGetMessage) {
+    return [model, get_message()];
   } else if (msg instanceof ApiReturnedCat && msg[0].isOk()) {
     let cat = msg[0][0];
     return [
       model.withFields({ cats: prepend(cat, model.cats) }),
       none()
     ];
+  } else if (msg instanceof ApiReturnedCat && !msg[0].isOk()) {
+    return [model, none()];
+  } else if (msg instanceof ApiReturnedMessage && msg[0].isOk()) {
+    let msg$1 = msg[0][0];
+    debug(msg$1);
+    return [model, none()];
   } else {
     return [model, none()];
   }
@@ -2759,6 +2974,10 @@ function view(model) {
       button(
         toList([on_click(new UserDecrementedCount())]),
         toList([text("-")])
+      ),
+      button(
+        toList([on_click(new UserGetMessage())]),
+        toList([text("get-message")])
       ),
       div(
         toList([]),
@@ -2781,7 +3000,7 @@ function main() {
     throw makeError(
       "assignment_no_match",
       "guestbook_front",
-      14,
+      16,
       "main",
       "Assignment pattern did not match",
       { value: $ }
