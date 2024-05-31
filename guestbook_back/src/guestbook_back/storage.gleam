@@ -3,7 +3,7 @@ import gleam/list
 import gleam/otp/actor
 import guestbook_shared/message
 
-pub type Message(e) {
+pub type Message(m) {
   // The `Shutdown` message is used to tell the actor to stop.
   // It is the simplest message type, it contains no data.
   Shutdown
@@ -11,14 +11,14 @@ pub type Message(e) {
   // The `Push` message is used to add a new element to the stack.
   // It contains the item to add, the type of which is the `element`
   // parameterised type.
-  Push(push: e)
+  Push(push: m)
 
   // The `Pop` message is used to remove an element from the stack.
   // It contains a `Subject`, which is used to send the response back to the
   // message sender. In this case the reply is of type `Result(element, Nil)`.
-  Pop(reply_with: Subject(Result(e, Nil)))
+  Pop(reply_with: Subject(Result(m, Nil)))
 
-  Get(Int, reply_with: Subject(Result(e, Nil)))
+  Get(String, reply_with: Subject(Result(m, Nil)))
 }
 
 // The last part is to implement the `handle_message` callback function.
@@ -65,6 +65,7 @@ pub fn handle_message(
         }
       }
     Get(id, client) -> {
+      // panic
       case stack {
         [] -> process.send(client, Error(Nil))
         _ -> {

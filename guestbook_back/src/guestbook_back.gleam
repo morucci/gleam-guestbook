@@ -15,12 +15,18 @@ pub fn main() {
   // load this from somewhere so that it is not regenerated on every restart.
   let secret_key_base = wisp.random_string(64)
 
-  let assert Ok(actor) = actor.start([], storage.handle_message)
+  let maybe_actor = actor.start([], storage.handle_message)
+
+  let assert Ok(pid) = actor.to_erlang_start_result(maybe_actor)
+
+  let assert Ok(actor) = maybe_actor
+
+  process.unlink(pid)
 
   process.send(
     actor,
     storage.Push(message.Message(
-      1,
+      "1",
       "This a the first message",
       12_345,
       "Fabien",
@@ -29,7 +35,7 @@ pub fn main() {
   process.send(
     actor,
     storage.Push(message.Message(
-      2,
+      "2",
       "This a the second message",
       12_346,
       "Fabien",

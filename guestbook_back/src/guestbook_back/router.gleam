@@ -1,3 +1,4 @@
+import birl
 import gleam/erlang/process.{type Subject}
 import gleam/http
 import gleam/int
@@ -19,14 +20,9 @@ pub fn handle_request(req: Request, ctx: Context) -> Response {
   use req <- web.middleware(req)
 
   case wisp.path_segments(req) {
-    ["message", mid_s] ->
+    ["message", id] ->
       case req.method {
-        http.Get -> {
-          case int.base_parse(mid_s, 10) {
-            Ok(parsed) -> get_message(parsed, ctx)
-            Error(_) -> wisp.bad_request()
-          }
-        }
+        http.Get -> get_message(id, ctx)
         _ -> wisp.bad_request()
       }
     ["message"] ->
@@ -39,11 +35,18 @@ pub fn handle_request(req: Request, ctx: Context) -> Response {
   }
 }
 
-pub fn post_message(req: Request, _ctx: Context) -> Response {
+pub fn post_message(req: Request, ctx: Context) -> Response {
   use json <- wisp.require_json(req)
   let decoder = input_message.decoder()
   case decoder(json) {
-    Ok(_) -> wisp.created()
+    Ok(im) -> {
+      let id = wisp.random_string(64)
+      let date = birl.to_unix(birl.now())
+      let m = message.Message(id, im.text, date, im.author)
+      process.send(ctx.db, storage.Push(m))
+      io.debug(m)
+      wisp.created()
+    }
     Error(err) -> {
       io.debug(err)
       wisp.bad_request()
@@ -51,7 +54,7 @@ pub fn post_message(req: Request, _ctx: Context) -> Response {
   }
 }
 
-pub fn get_message(id: Int, ctx: Context) -> Response {
+pub fn get_message(id: String, ctx: Context) -> Response {
   let g = fn(s: Subject(Result(e, Nil))) { storage.Get(id, s) }
   case process.call(ctx.db, g, 10) {
     Ok(m) -> wisp.json_response(json.to_string_builder(message.to_json(m)), 200)
