@@ -25,6 +25,6 @@ pub fn decoder() -> fn(dynamic.Dynamic) ->
   )
 }
 
-pub fn from_json(json: String) -> Result(Message, json.DecodeError) {
+pub fn from_string(json: String) -> Result(Message, json.DecodeError) {
   json.decode(from: json, using: decoder())
 }
