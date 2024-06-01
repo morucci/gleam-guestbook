@@ -1,7 +1,6 @@
 import birl
 import gleam/erlang/process.{type Subject}
 import gleam/http
-import gleam/int
 import gleam/io
 import gleam/json
 import guestbook_back/storage

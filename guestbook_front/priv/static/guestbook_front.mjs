@@ -1694,7 +1694,7 @@ function decoder() {
     (var0, var1, var2, var3) => {
       return new Message(var0, var1, var2, var3);
     },
-    field("id", int),
+    field("id", string),
     field("text", string),
     field("unix_date", int),
     field("author", string)
@@ -1900,7 +1900,8 @@ function createElementNode({ prev, next, dispatch, stack }) {
     const name = attr[0];
     const value = attr[1];
     if (attr.as_property) {
-      el2[name] = value;
+      if (el2[name] !== value)
+        el2[name] = value;
       if (canMorph)
         prevAttributes.delete(name);
     } else if (name.startsWith("on")) {
@@ -2446,7 +2447,7 @@ function do_parse(uri_string) {
 function parse2(uri_string) {
   return do_parse(uri_string);
 }
-function to_string5(uri) {
+function to_string6(uri) {
   let parts = (() => {
     let $ = uri.fragment;
     if ($ instanceof Some) {
@@ -2727,7 +2728,7 @@ function from_fetch_response(response) {
   );
 }
 function to_fetch_request(request) {
-  let url = to_string5(to_uri(request));
+  let url = to_string6(to_uri(request));
   let method = method_to_string(request.method).toUpperCase();
   let options = {
     headers: make_headers(request.headers),
