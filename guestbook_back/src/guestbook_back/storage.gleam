@@ -19,6 +19,16 @@ pub type Message(m) {
   Pop(reply_with: Subject(Result(m, Nil)))
 
   Get(String, reply_with: Subject(Result(m, Nil)))
+
+  GetAll(reply_with: Subject(Result(List(m), Nil)))
+}
+
+pub fn new() -> Subject(Message(message.Message)) {
+  let maybe_actor = actor.start([], handle_message)
+  let assert Ok(pid) = actor.to_erlang_start_result(maybe_actor)
+  process.unlink(pid)
+  let assert Ok(actor) = maybe_actor
+  actor
 }
 
 // The last part is to implement the `handle_message` callback function.
@@ -78,6 +88,10 @@ pub fn handle_message(
           }
         }
       }
+      actor.continue(stack)
+    }
+    GetAll(client) -> {
+      process.send(client, Ok(stack))
       actor.continue(stack)
     }
   }

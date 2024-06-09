@@ -29,6 +29,11 @@ pub fn handle_request(req: Request, ctx: Context) -> Response {
         http.Post -> post_message(req, ctx)
         _ -> wisp.bad_request()
       }
+    ["messages"] ->
+      case req.method {
+        http.Get -> get_all_messages(ctx)
+        _ -> wisp.bad_request()
+      }
     [] -> home_page(req)
     _ -> wisp.not_found()
   }
@@ -57,6 +62,18 @@ pub fn get_message(id: String, ctx: Context) -> Response {
   let g = fn(s: Subject(Result(e, Nil))) { storage.Get(id, s) }
   case process.call(ctx.db, g, 10) {
     Ok(m) -> wisp.json_response(json.to_string_builder(message.to_json(m)), 200)
+    Error(_) -> wisp.not_found()
+  }
+}
+
+pub fn get_all_messages(ctx: Context) -> Response {
+  case process.call(ctx.db, storage.GetAll, 10) {
+    Ok(messages) -> {
+      wisp.json_response(
+        json.to_string_builder(json.array(messages, message.to_json)),
+        200,
+      )
+    }
     Error(_) -> wisp.not_found()
   }
 }

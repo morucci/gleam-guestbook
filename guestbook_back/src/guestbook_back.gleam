@@ -1,8 +1,6 @@
 import gleam/erlang/process
-import gleam/otp/actor
 import guestbook_back/router
 import guestbook_back/storage
-import guestbook_shared/message
 import mist
 import wisp
 
@@ -15,34 +13,7 @@ pub fn main() {
   // load this from somewhere so that it is not regenerated on every restart.
   let secret_key_base = wisp.random_string(64)
 
-  let maybe_actor = actor.start([], storage.handle_message)
-
-  let assert Ok(pid) = actor.to_erlang_start_result(maybe_actor)
-
-  let assert Ok(actor) = maybe_actor
-
-  process.unlink(pid)
-
-  process.send(
-    actor,
-    storage.Push(message.Message(
-      "1",
-      "This a the first message",
-      12_345,
-      "Fabien",
-    )),
-  )
-  process.send(
-    actor,
-    storage.Push(message.Message(
-      "2",
-      "This a the second message",
-      12_346,
-      "Fabien",
-    )),
-  )
-
-  let context = router.Context(db: actor)
+  let context = router.Context(db: storage.new())
   let handler = router.handle_request(_, context)
 
   // Start the Mist web server.
