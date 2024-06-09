@@ -1131,6 +1131,12 @@ function decode_string(data) {
 function decode_int(data) {
   return Number.isInteger(data) ? new Ok(data) : decoder_error("Int", data);
 }
+function decode_list(data) {
+  if (Array.isArray(data)) {
+    return new Ok(List.fromArray(data));
+  }
+  return data instanceof List ? new Ok(data) : decoder_error("List", data);
+}
 function decode_field(value, name) {
   const not_a_map_error = () => decoder_error("Dict", value);
   if (value instanceof Dict || value instanceof WeakMap || value instanceof Map) {
@@ -1219,8 +1225,8 @@ function inspectCustomType(record) {
   }).join(", ");
   return props ? `${record.constructor.name}(${props})` : record.constructor.name;
 }
-function inspectList(list) {
-  return `[${list.toArray().map(inspect).join(", ")}]`;
+function inspectList(list2) {
+  return `[${list2.toArray().map(inspect).join(", ")}]`;
 }
 function inspectBitArray(bits) {
   return `<<${Array.from(bits.buffer).join(", ")}>>`;
@@ -1261,32 +1267,58 @@ function do_reverse(loop$remaining, loop$accumulator) {
 function reverse(xs) {
   return do_reverse(xs, toList([]));
 }
-function first(list) {
-  if (list.hasLength(0)) {
+function first(list2) {
+  if (list2.hasLength(0)) {
     return new Error(void 0);
   } else {
-    let x = list.head;
+    let x = list2.head;
     return new Ok(x);
   }
 }
 function do_map(loop$list, loop$fun, loop$acc) {
   while (true) {
-    let list = loop$list;
+    let list2 = loop$list;
     let fun = loop$fun;
     let acc = loop$acc;
-    if (list.hasLength(0)) {
+    if (list2.hasLength(0)) {
       return reverse(acc);
     } else {
-      let x = list.head;
-      let xs = list.tail;
+      let x = list2.head;
+      let xs = list2.tail;
       loop$list = xs;
       loop$fun = fun;
       loop$acc = prepend(fun(x), acc);
     }
   }
 }
-function map2(list, fun) {
-  return do_map(list, fun, toList([]));
+function map2(list2, fun) {
+  return do_map(list2, fun, toList([]));
+}
+function do_try_map(loop$list, loop$fun, loop$acc) {
+  while (true) {
+    let list2 = loop$list;
+    let fun = loop$fun;
+    let acc = loop$acc;
+    if (list2.hasLength(0)) {
+      return new Ok(reverse(acc));
+    } else {
+      let x = list2.head;
+      let xs = list2.tail;
+      let $ = fun(x);
+      if ($.isOk()) {
+        let y = $[0];
+        loop$list = xs;
+        loop$fun = fun;
+        loop$acc = prepend(y, acc);
+      } else {
+        let error = $[0];
+        return new Error(error);
+      }
+    }
+  }
+}
+function try_map(list2, fun) {
+  return do_try_map(list2, fun, toList([]));
 }
 function do_append(loop$first, loop$second) {
   while (true) {
@@ -1326,10 +1358,10 @@ function do_concat(loop$lists, loop$acc) {
     if (lists.hasLength(0)) {
       return reverse(acc);
     } else {
-      let list = lists.head;
+      let list2 = lists.head;
       let further_lists = lists.tail;
       loop$lists = further_lists;
-      loop$acc = reverse_and_prepend(list, acc);
+      loop$acc = reverse_and_prepend(list2, acc);
     }
   }
 }
@@ -1429,6 +1461,9 @@ function classify(data) {
 function int(data) {
   return decode_int(data);
 }
+function shallow_list(value) {
+  return decode_list(value);
+}
 function any(decoders) {
   return (data) => {
     if (decoders.hasLength(0)) {
@@ -1475,6 +1510,23 @@ function push_path(error, name) {
     }
   })();
   return error.withFields({ path: prepend(name$2, error.path) });
+}
+function list(decoder_type) {
+  return (dynamic) => {
+    return try$(
+      shallow_list(dynamic),
+      (list2) => {
+        let _pipe = list2;
+        let _pipe$1 = try_map(_pipe, decoder_type);
+        return map_errors(
+          _pipe$1,
+          (_capture) => {
+            return push_path(_capture, "*");
+          }
+        );
+      }
+    );
+  };
 }
 function map_errors(result, f) {
   return map_error(
@@ -2340,24 +2392,24 @@ function noneify_empty_string(x) {
 }
 function extra_required(loop$list, loop$remaining) {
   while (true) {
-    let list = loop$list;
+    let list2 = loop$list;
     let remaining = loop$remaining;
     if (remaining === 0) {
       return 0;
-    } else if (list.hasLength(0)) {
+    } else if (list2.hasLength(0)) {
       return remaining;
     } else {
-      let xs = list.tail;
+      let xs = list2.tail;
       loop$list = xs;
       loop$remaining = remaining - 1;
     }
   }
 }
-function pad_list(list, size) {
-  let _pipe = list;
+function pad_list(list2, size) {
+  let _pipe = list2;
   return append(
     _pipe,
-    repeat(new None(), extra_required(list, size))
+    repeat(new None(), extra_required(list2, size))
   );
 }
 function split_authority(authority) {
@@ -2904,6 +2956,8 @@ var UserDecrementedCount = class extends CustomType {
 };
 var UserGetMessage = class extends CustomType {
 };
+var UserGetMessages = class extends CustomType {
+};
 var ApiReturnedCat = class extends CustomType {
   constructor(x0) {
     super();
@@ -2911,6 +2965,12 @@ var ApiReturnedCat = class extends CustomType {
   }
 };
 var ApiReturnedMessage = class extends CustomType {
+  constructor(x0) {
+    super();
+    this[0] = x0;
+  }
+};
+var ApiReturnedMessages = class extends CustomType {
   constructor(x0) {
     super();
     this[0] = x0;
@@ -2939,6 +2999,16 @@ function get_message() {
   );
   return get2("http://localhost:8000/message/1", expect);
 }
+function get_messages() {
+  let decoder2 = list(decoder());
+  let expect = expect_json(
+    decoder2,
+    (var0) => {
+      return new ApiReturnedMessages(var0);
+    }
+  );
+  return get2("http://localhost:8000/messages", expect);
+}
 function update2(model, msg) {
   if (msg instanceof UserIncrementedCount) {
     return [model.withFields({ count: model.count + 1 }), get_cat()];
@@ -2946,6 +3016,8 @@ function update2(model, msg) {
     return [model.withFields({ count: model.count - 1 }), none()];
   } else if (msg instanceof UserGetMessage) {
     return [model, get_message()];
+  } else if (msg instanceof UserGetMessages) {
+    return [model, get_messages()];
   } else if (msg instanceof ApiReturnedCat && msg[0].isOk()) {
     let cat = msg[0][0];
     return [
@@ -2957,6 +3029,12 @@ function update2(model, msg) {
   } else if (msg instanceof ApiReturnedMessage && msg[0].isOk()) {
     let msg$1 = msg[0][0];
     debug(msg$1);
+    return [model, none()];
+  } else if (msg instanceof ApiReturnedMessages && msg[0].isOk()) {
+    let msgs = msg[0][0];
+    debug(msgs);
+    return [model, none()];
+  } else if (msg instanceof ApiReturnedMessage && !msg[0].isOk()) {
     return [model, none()];
   } else {
     return [model, none()];
@@ -2979,6 +3057,10 @@ function view(model) {
       button(
         toList([on_click(new UserGetMessage())]),
         toList([text("get-message")])
+      ),
+      button(
+        toList([on_click(new UserGetMessages())]),
+        toList([text("get-messages")])
       ),
       div(
         toList([]),

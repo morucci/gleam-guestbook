@@ -30,8 +30,10 @@ pub type Msg {
   UserIncrementedCount
   UserDecrementedCount
   UserGetMessage
+  UserGetMessages
   ApiReturnedCat(Result(String, lustre_http.HttpError))
   ApiReturnedMessage(Result(message.Message, lustre_http.HttpError))
+  ApiReturnedMessages(Result(List(message.Message), lustre_http.HttpError))
 }
 
 pub fn update(model: Model, msg: Msg) -> #(Model, effect.Effect(Msg)) {
@@ -42,6 +44,7 @@ pub fn update(model: Model, msg: Msg) -> #(Model, effect.Effect(Msg)) {
       effect.none(),
     )
     UserGetMessage -> #(model, get_message())
+    UserGetMessages -> #(model, get_messages())
     ApiReturnedCat(Ok(cat)) -> #(
       Model(..model, cats: [cat, ..model.cats]),
       effect.none(),
@@ -51,7 +54,12 @@ pub fn update(model: Model, msg: Msg) -> #(Model, effect.Effect(Msg)) {
       io.debug(msg)
       #(model, effect.none())
     }
+    ApiReturnedMessages(Ok(msgs)) -> {
+      io.debug(msgs)
+      #(model, effect.none())
+    }
     ApiReturnedMessage(Error(_)) -> #(model, effect.none())
+    ApiReturnedMessages(Error(_)) -> #(model, effect.none())
   }
 }
 
@@ -68,6 +76,12 @@ fn get_message() -> effect.Effect(Msg) {
   lustre_http.get("http://localhost:8000/message/1", expect)
 }
 
+fn get_messages() -> effect.Effect(Msg) {
+  let decoder = dynamic.list(message.decoder())
+  let expect = lustre_http.expect_json(decoder, ApiReturnedMessages)
+  lustre_http.get("http://localhost:8000/messages", expect)
+}
+
 pub fn view(model: Model) -> element.Element(Msg) {
   let count = int.to_string(model.count)
 
@@ -76,6 +90,9 @@ pub fn view(model: Model) -> element.Element(Msg) {
     element.text(count),
     html.button([event.on_click(UserDecrementedCount)], [element.text("-")]),
     html.button([event.on_click(UserGetMessage)], [element.text("get-message")]),
+    html.button([event.on_click(UserGetMessages)], [
+      element.text("get-messages"),
+    ]),
     html.div(
       [],
       list.map(model.cats, fn(cat) {
