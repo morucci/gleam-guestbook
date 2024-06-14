@@ -3069,17 +3069,24 @@ function expect_json(decoder2, to_msg) {
 
 // build/dev/javascript/guestbook_front/guestbook_front.mjs
 var Model = class extends CustomType {
-  constructor(count, cats, messages, input_value) {
+  constructor(count, cats, messages, input_message, input_author) {
     super();
     this.count = count;
     this.cats = cats;
     this.messages = messages;
-    this.input_value = input_value;
+    this.input_message = input_message;
+    this.input_author = input_author;
   }
 };
 var UserGetMessages = class extends CustomType {
 };
 var UserUpdatedMessage = class extends CustomType {
+  constructor(x0) {
+    super();
+    this[0] = x0;
+  }
+};
+var UserUpdatedAuthor = class extends CustomType {
   constructor(x0) {
     super();
     this[0] = x0;
@@ -3107,7 +3114,7 @@ var ApiReturnedPostMessage = class extends CustomType {
 };
 function init2(_) {
   return [
-    new Model(0, toList([]), toList([]), "Enter a message"),
+    new Model(0, toList([]), toList([]), "Enter a message", "Your name"),
     none()
   ];
 }
@@ -3121,8 +3128,8 @@ function get_messages() {
   );
   return get2("http://localhost:8000/messages", expect);
 }
-function post_message() {
-  let m = new InputMessage("Text", "Fabien");
+function post_message(input_message, input_author) {
+  let m = new InputMessage(input_message, input_author);
   return post(
     "http://localhost:8000/message",
     to_json(m),
@@ -3139,9 +3146,13 @@ function update2(model, msg) {
   } else if (msg instanceof UserUpdatedMessage) {
     let input2 = msg[0];
     debug(input2);
-    return [model.withFields({ input_value: input2 }), none()];
+    return [model.withFields({ input_message: input2 }), none()];
+  } else if (msg instanceof UserUpdatedAuthor) {
+    let input2 = msg[0];
+    debug(input2);
+    return [model.withFields({ input_author: input2 }), none()];
   } else if (msg instanceof UserSendMessage) {
-    return [model, post_message()];
+    return [model, post_message(model.input_message, model.input_author)];
   } else if (msg instanceof ApiReturnedMessage && msg[0].isOk()) {
     let msg$1 = msg[0][0];
     debug(msg$1);
@@ -3161,17 +3172,17 @@ function update2(model, msg) {
     return [model, none()];
   }
 }
-function message_h(message) {
-  return div(
-    toList([]),
-    toList([
-      text(message.text),
-      text(" "),
-      text(message.author)
-    ])
-  );
-}
 function messages_h(messages) {
+  let message_h = (message) => {
+    return div(
+      toList([]),
+      toList([
+        text(message.text),
+        text(" "),
+        text(message.author)
+      ])
+    );
+  };
   return div(toList([]), map2(messages, message_h));
 }
 function view(model) {
@@ -3180,9 +3191,17 @@ function view(model) {
     toList([
       input(
         toList([
-          value(model.input_value),
+          value(model.input_message),
           on_input((var0) => {
             return new UserUpdatedMessage(var0);
+          })
+        ])
+      ),
+      input(
+        toList([
+          value(model.input_author),
+          on_input((var0) => {
+            return new UserUpdatedAuthor(var0);
           })
         ])
       ),

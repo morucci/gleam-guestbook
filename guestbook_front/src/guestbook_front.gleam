@@ -23,17 +23,19 @@ pub type Model {
     count: Int,
     cats: List(String),
     messages: List(message.Message),
-    input_value: String,
+    input_message: String,
+    input_author: String,
   )
 }
 
 fn init(_flags) -> #(Model, effect.Effect(Msg)) {
-  #(Model(0, [], [], "Enter a message"), effect.none())
+  #(Model(0, [], [], "Enter a message", "Your name"), effect.none())
 }
 
 pub type Msg {
   UserGetMessages
   UserUpdatedMessage(String)
+  UserUpdatedAuthor(String)
   UserSendMessage
   ApiReturnedMessage(Result(message.Message, lustre_http.HttpError))
   ApiReturnedMessages(Result(List(message.Message), lustre_http.HttpError))
@@ -45,10 +47,14 @@ pub fn update(model: Model, msg: Msg) -> #(Model, effect.Effect(Msg)) {
     UserGetMessages -> #(model, get_messages())
     UserUpdatedMessage(input) -> {
       io.debug(input)
-      #(Model(..model, input_value: input), effect.none())
+      #(Model(..model, input_message: input), effect.none())
+    }
+    UserUpdatedAuthor(input) -> {
+      io.debug(input)
+      #(Model(..model, input_author: input), effect.none())
     }
     UserSendMessage -> {
-      #(model, post_message())
+      #(model, post_message(model.input_message, model.input_author))
     }
     ApiReturnedMessage(Ok(msg)) -> {
       io.debug(msg)
@@ -74,8 +80,8 @@ fn get_messages() -> effect.Effect(Msg) {
   lustre_http.get("http://localhost:8000/messages", expect)
 }
 
-fn post_message() -> effect.Effect(Msg) {
-  let m = input_message.InputMessage("Text", "Fabien")
+fn post_message(input_message: String, input_author) -> effect.Effect(Msg) {
+  let m = input_message.InputMessage(input_message, input_author)
   lustre_http.post(
     "http://localhost:8000/message",
     input_message.to_json(m),
@@ -83,23 +89,26 @@ fn post_message() -> effect.Effect(Msg) {
   )
 }
 
-fn message_h(message: message.Message) -> element.Element(Msg) {
-  html.div([], [
-    element.text(message.text),
-    element.text(" "),
-    element.text(message.author),
-  ])
-}
-
 fn messages_h(messages: List(message.Message)) -> element.Element(Msg) {
+  let message_h = fn(message: message.Message) -> element.Element(Msg) {
+    html.div([], [
+      element.text(message.text),
+      element.text(" "),
+      element.text(message.author),
+    ])
+  }
   html.div([], list.map(messages, message_h))
 }
 
 pub fn view(model: Model) -> element.Element(Msg) {
   html.div([], [
     html.input([
-      attribute.value(model.input_value),
+      attribute.value(model.input_message),
       event.on_input(UserUpdatedMessage),
+    ]),
+    html.input([
+      attribute.value(model.input_author),
+      event.on_input(UserUpdatedAuthor),
     ]),
     html.button([event.on_click(UserSendMessage)], [element.text("Send")]),
     html.button([event.on_click(UserGetMessages)], [
