@@ -109,17 +109,17 @@ var BitArray = class _BitArray {
   }
 };
 var UtfCodepoint = class {
-  constructor(value) {
-    this.value = value;
+  constructor(value3) {
+    this.value = value3;
   }
 };
 function byteArrayToInt(byteArray) {
   byteArray = byteArray.reverse();
-  let value = 0;
+  let value3 = 0;
   for (let i = byteArray.length - 1; i >= 0; i--) {
-    value = value * 256 + byteArray[i];
+    value3 = value3 * 256 + byteArray[i];
   }
-  return value;
+  return value3;
 }
 function byteArrayToFloat(byteArray) {
   return new Float64Array(byteArray.reverse().buffer)[0];
@@ -131,9 +131,9 @@ var Result = class _Result extends CustomType {
   }
 };
 var Ok = class extends Result {
-  constructor(value) {
+  constructor(value3) {
     super();
-    this[0] = value;
+    this[0] = value3;
   }
   // @internal
   isOk() {
@@ -1001,9 +1001,9 @@ var NOT_FOUND = {};
 function identity(x) {
   return x;
 }
-function parse_int(value) {
-  if (/^[-+]?(\d+)$/.test(value)) {
-    return new Ok(parseInt(value));
+function parse_int(value3) {
+  if (/^[-+]?(\d+)$/.test(value3)) {
+    return new Ok(parseInt(value3));
   } else {
     return new Error(Nil);
   }
@@ -1083,11 +1083,11 @@ function regex_scan(regex, string3) {
   return List.fromArray(matches);
 }
 function map_get(map6, key) {
-  const value = map6.get(key, NOT_FOUND);
-  if (value === NOT_FOUND) {
+  const value3 = map6.get(key, NOT_FOUND);
+  if (value3 === NOT_FOUND) {
     return new Error(Nil);
   }
-  return new Ok(value);
+  return new Ok(value3);
 }
 function classify_dynamic(data) {
   if (typeof data === "string") {
@@ -1137,22 +1137,22 @@ function decode_list(data) {
   }
   return data instanceof List ? new Ok(data) : decoder_error("List", data);
 }
-function decode_field(value, name) {
-  const not_a_map_error = () => decoder_error("Dict", value);
-  if (value instanceof Dict || value instanceof WeakMap || value instanceof Map) {
-    const entry = map_get(value, name);
+function decode_field(value3, name) {
+  const not_a_map_error = () => decoder_error("Dict", value3);
+  if (value3 instanceof Dict || value3 instanceof WeakMap || value3 instanceof Map) {
+    const entry = map_get(value3, name);
     return new Ok(entry.isOk() ? new Some(entry[0]) : new None());
-  } else if (value === null) {
+  } else if (value3 === null) {
     return not_a_map_error();
-  } else if (Object.getPrototypeOf(value) == Object.prototype) {
-    return try_get_field(value, name, () => new Ok(new None()));
+  } else if (Object.getPrototypeOf(value3) == Object.prototype) {
+    return try_get_field(value3, name, () => new Ok(new None()));
   } else {
-    return try_get_field(value, name, not_a_map_error);
+    return try_get_field(value3, name, not_a_map_error);
   }
 }
-function try_get_field(value, field2, or_else) {
+function try_get_field(value3, field2, or_else) {
   try {
-    return field2 in value ? new Ok(new Some(value[field2])) : or_else();
+    return field2 in value3 ? new Ok(new Some(value3[field2])) : or_else();
   } catch {
     return or_else();
   }
@@ -1200,10 +1200,10 @@ function inspect(v) {
 function inspectDict(map6) {
   let body = "dict.from_list([";
   let first2 = true;
-  map6.forEach((value, key) => {
+  map6.forEach((value3, key) => {
     if (!first2)
       body = body + ", ";
-    body = body + "#(" + inspect(key) + ", " + inspect(value) + ")";
+    body = body + "#(" + inspect(key) + ", " + inspect(value3) + ")";
     first2 = false;
   });
   return body + "])";
@@ -1220,8 +1220,8 @@ function inspectObject(v) {
 }
 function inspectCustomType(record) {
   const props = Object.keys(record).map((label) => {
-    const value = inspect(record[label]);
-    return isNaN(parseInt(label)) ? `${label}: ${value}` : value;
+    const value3 = inspect(record[label]);
+    return isNaN(parseInt(label)) ? `${label}: ${value3}` : value3;
   }).join(", ");
   return props ? `${record.constructor.name}(${props})` : record.constructor.name;
 }
@@ -1386,6 +1386,19 @@ function do_repeat(loop$a, loop$times, loop$acc) {
 function repeat(a, times) {
   return do_repeat(a, times, toList([]));
 }
+function key_set(list2, key, value3) {
+  if (list2.hasLength(0)) {
+    return toList([[key, value3]]);
+  } else if (list2.atLeastLength(1) && isEqual(list2.head[0], key)) {
+    let k = list2.head[0];
+    let rest$1 = list2.tail;
+    return prepend([key, value3], rest$1);
+  } else {
+    let first$1 = list2.head;
+    let rest$1 = list2.tail;
+    return prepend(first$1, key_set(rest$1, key, value3));
+  }
+}
 
 // build/dev/javascript/gleam_stdlib/gleam/result.mjs
 function map3(result, fun) {
@@ -1431,6 +1444,14 @@ function nil_error(result) {
     return void 0;
   });
 }
+function replace(result, value3) {
+  if (result.isOk()) {
+    return new Ok(value3);
+  } else {
+    let error = result[0];
+    return new Error(error);
+  }
+}
 
 // build/dev/javascript/gleam_stdlib/gleam/string_builder.mjs
 function from_strings(strings) {
@@ -1461,8 +1482,8 @@ function classify(data) {
 function int(data) {
   return decode_int(data);
 }
-function shallow_list(value) {
-  return decode_list(value);
+function shallow_list(value3) {
+  return decode_list(value3);
 }
 function any(decoders) {
   return (data) => {
@@ -1537,10 +1558,10 @@ function map_errors(result, f) {
   );
 }
 function field(name, inner_type) {
-  return (value) => {
+  return (value3) => {
     let missing_field_error = new DecodeError("field", "nothing", toList([]));
     return try$(
-      decode_field(value, name),
+      decode_field(value3, name),
       (maybe_inner) => {
         let _pipe = maybe_inner;
         let _pipe$1 = to_result(_pipe, toList([missing_field_error]));
@@ -1610,6 +1631,15 @@ function debug(term) {
 }
 
 // build/dev/javascript/gleam_json/gleam_json_ffi.mjs
+function json_to_string(json) {
+  return JSON.stringify(json);
+}
+function object(entries) {
+  return Object.fromEntries(entries);
+}
+function identity2(x) {
+  return x;
+}
 function decode(string3) {
   try {
     const result = JSON.parse(string3);
@@ -1730,6 +1760,32 @@ function do_decode(json, decoder2) {
 function decode2(json, decoder2) {
   return do_decode(json, decoder2);
 }
+function to_string5(json) {
+  return json_to_string(json);
+}
+function string2(input2) {
+  return identity2(input2);
+}
+function object2(entries) {
+  return object(entries);
+}
+
+// build/dev/javascript/guestbook_shared/guestbook_shared/input_message.mjs
+var InputMessage = class extends CustomType {
+  constructor(text2, author) {
+    super();
+    this.text = text2;
+    this.author = author;
+  }
+};
+function to_json(msg) {
+  return object2(
+    toList([
+      ["text", string2(msg.text)],
+      ["author", string2(msg.author)]
+    ])
+  );
+}
 
 // build/dev/javascript/guestbook_shared/guestbook_shared/message.mjs
 var Message = class extends CustomType {
@@ -1814,11 +1870,14 @@ var Event = class extends CustomType {
 };
 
 // build/dev/javascript/lustre/lustre/attribute.mjs
-function attribute(name, value) {
-  return new Attribute(name, from(value), false);
+function attribute(name, value3) {
+  return new Attribute(name, from(value3), false);
 }
 function on(name, handler) {
   return new Event("on" + name, handler);
+}
+function value(val) {
+  return attribute("value", val);
 }
 function src(uri) {
   return attribute("src", uri);
@@ -1950,15 +2009,15 @@ function createElementNode({ prev, next, dispatch, stack }) {
   let innerHTML = null;
   for (const attr of next.attrs) {
     const name = attr[0];
-    const value = attr[1];
+    const value3 = attr[1];
     if (attr.as_property) {
-      if (el2[name] !== value)
-        el2[name] = value;
+      if (el2[name] !== value3)
+        el2[name] = value3;
       if (canMorph)
         prevAttributes.delete(name);
     } else if (name.startsWith("on")) {
       const eventName = name.slice(2);
-      const callback = dispatch(value);
+      const callback = dispatch(value3);
       if (!handlersForEl.has(eventName)) {
         el2.addEventListener(eventName, lustreGenericEventHandler);
       }
@@ -1972,18 +2031,18 @@ function createElementNode({ prev, next, dispatch, stack }) {
         el2.addEventListener(eventName, lustreGenericEventHandler);
       }
       handlersForEl.set(eventName, callback);
-      el2.setAttribute(name, value);
+      el2.setAttribute(name, value3);
     } else if (name === "class") {
-      className = className === null ? value : className + " " + value;
+      className = className === null ? value3 : className + " " + value3;
     } else if (name === "style") {
-      style = style === null ? value : style + value;
+      style = style === null ? value3 : style + value3;
     } else if (name === "dangerous-unescaped-html") {
-      innerHTML = value;
+      innerHTML = value3;
     } else {
-      if (typeof value === "string")
-        el2.setAttribute(name, value);
+      if (typeof value3 === "string")
+        el2.setAttribute(name, value3);
       if (name === "value" || name === "selected")
-        el2[name] = value;
+        el2[name] = value3;
       if (canMorph)
         prevAttributes.delete(name);
     }
@@ -2327,6 +2386,9 @@ function img(attrs) {
 function button(attrs, children) {
   return element("button", attrs, children);
 }
+function input(attrs) {
+  return element("input", attrs, toList([]));
+}
 
 // build/dev/javascript/lustre/lustre/event.mjs
 function on2(name, handler) {
@@ -2336,6 +2398,21 @@ function on_click(msg) {
   return on2("click", (_) => {
     return new Ok(msg);
   });
+}
+function value2(event2) {
+  let _pipe = event2;
+  return field("target", field("value", string))(
+    _pipe
+  );
+}
+function on_input(msg) {
+  return on2(
+    "input",
+    (event2) => {
+      let _pipe = value2(event2);
+      return map3(_pipe, msg);
+    }
+  );
 }
 
 // build/dev/javascript/gleam_stdlib/gleam/uri.mjs
@@ -2499,7 +2576,7 @@ function do_parse(uri_string) {
 function parse2(uri_string) {
   return do_parse(uri_string);
 }
-function to_string6(uri) {
+function to_string7(uri) {
   let parts = (() => {
     let $ = uri.fragment;
     if ($ instanceof Some) {
@@ -2694,6 +2771,23 @@ function from_uri(uri) {
     }
   );
 }
+function set_header(request, key, value3) {
+  let headers = key_set(request.headers, lowercase2(key), value3);
+  return request.withFields({ headers });
+}
+function set_body(req, body) {
+  let method = req.method;
+  let headers = req.headers;
+  let scheme = req.scheme;
+  let host = req.host;
+  let port = req.port;
+  let path = req.path;
+  let query = req.query;
+  return new Request(method, headers, body, scheme, host, port, path, query);
+}
+function set_method(req, method) {
+  return req.withFields({ method });
+}
 function to(url) {
   let _pipe = url;
   let _pipe$1 = parse2(_pipe);
@@ -2715,22 +2809,22 @@ var PromiseLayer = class _PromiseLayer {
   constructor(promise) {
     this.promise = promise;
   }
-  static wrap(value) {
-    return value instanceof Promise ? new _PromiseLayer(value) : value;
+  static wrap(value3) {
+    return value3 instanceof Promise ? new _PromiseLayer(value3) : value3;
   }
-  static unwrap(value) {
-    return value instanceof _PromiseLayer ? value.promise : value;
+  static unwrap(value3) {
+    return value3 instanceof _PromiseLayer ? value3.promise : value3;
   }
 };
-function resolve(value) {
-  return Promise.resolve(PromiseLayer.wrap(value));
+function resolve(value3) {
+  return Promise.resolve(PromiseLayer.wrap(value3));
 }
 function then(promise, fn) {
-  return promise.then((value) => fn(PromiseLayer.unwrap(value)));
+  return promise.then((value3) => fn(PromiseLayer.unwrap(value3)));
 }
 function map_promise(promise, fn) {
   return promise.then(
-    (value) => PromiseLayer.wrap(fn(PromiseLayer.unwrap(value)))
+    (value3) => PromiseLayer.wrap(fn(PromiseLayer.unwrap(value3)))
   );
 }
 function rescue(promise, fn) {
@@ -2780,7 +2874,7 @@ function from_fetch_response(response) {
   );
 }
 function to_fetch_request(request) {
-  let url = to_string6(to_uri(request));
+  let url = to_string7(to_uri(request));
   let method = method_to_string(request.method).toUpperCase();
   let options = {
     headers: make_headers(request.headers),
@@ -2901,6 +2995,27 @@ function get2(url, expect) {
     }
   );
 }
+function post(url, body, expect) {
+  return from2(
+    (dispatch) => {
+      let $ = to(url);
+      if ($.isOk()) {
+        let req = $[0];
+        let _pipe = req;
+        let _pipe$1 = set_method(_pipe, new Post());
+        let _pipe$2 = set_header(
+          _pipe$1,
+          "Content-Type",
+          "application/json"
+        );
+        let _pipe$3 = set_body(_pipe$2, to_string5(body));
+        return do_send(_pipe$3, expect, dispatch);
+      } else {
+        return dispatch(expect.run(new Error(new BadUrl(url))));
+      }
+    }
+  );
+}
 function response_to_result(response) {
   if (response instanceof Response && (200 <= response.status && response.status <= 299)) {
     let status = response.status;
@@ -2918,6 +3033,16 @@ function response_to_result(response) {
     let body = response.body;
     return new Error(new OtherError(code, body));
   }
+}
+function expect_anything(to_msg) {
+  return new ExpectTextResponse(
+    (response) => {
+      let _pipe = response;
+      let _pipe$1 = then$(_pipe, response_to_result);
+      let _pipe$2 = replace(_pipe$1, void 0);
+      return to_msg(_pipe$2);
+    }
+  );
 }
 function expect_json(decoder2, to_msg) {
   return new ExpectTextResponse(
@@ -2944,25 +3069,23 @@ function expect_json(decoder2, to_msg) {
 
 // build/dev/javascript/guestbook_front/guestbook_front.mjs
 var Model = class extends CustomType {
-  constructor(count, cats) {
+  constructor(count, cats, messages, input_value) {
     super();
     this.count = count;
     this.cats = cats;
+    this.messages = messages;
+    this.input_value = input_value;
   }
-};
-var UserIncrementedCount = class extends CustomType {
-};
-var UserDecrementedCount = class extends CustomType {
-};
-var UserGetMessage = class extends CustomType {
 };
 var UserGetMessages = class extends CustomType {
 };
-var ApiReturnedCat = class extends CustomType {
+var UserUpdatedMessage = class extends CustomType {
   constructor(x0) {
     super();
     this[0] = x0;
   }
+};
+var UserSendMessage = class extends CustomType {
 };
 var ApiReturnedMessage = class extends CustomType {
   constructor(x0) {
@@ -2976,28 +3099,17 @@ var ApiReturnedMessages = class extends CustomType {
     this[0] = x0;
   }
 };
+var ApiReturnedPostMessage = class extends CustomType {
+  constructor(x0) {
+    super();
+    this[0] = x0;
+  }
+};
 function init2(_) {
-  return [new Model(0, toList([])), none()];
-}
-function get_cat() {
-  let decoder2 = field("_id", string);
-  let expect = expect_json(
-    decoder2,
-    (var0) => {
-      return new ApiReturnedCat(var0);
-    }
-  );
-  return get2("https://cataas.com/cat?json=true", expect);
-}
-function get_message() {
-  let decoder2 = decoder();
-  let expect = expect_json(
-    decoder2,
-    (var0) => {
-      return new ApiReturnedMessage(var0);
-    }
-  );
-  return get2("http://localhost:8000/message/1", expect);
+  return [
+    new Model(0, toList([]), toList([]), "Enter a message"),
+    none()
+  ];
 }
 function get_messages() {
   let decoder2 = list(decoder());
@@ -3009,23 +3121,27 @@ function get_messages() {
   );
   return get2("http://localhost:8000/messages", expect);
 }
+function post_message() {
+  let m = new InputMessage("Text", "Fabien");
+  return post(
+    "http://localhost:8000/message",
+    to_json(m),
+    expect_anything(
+      (var0) => {
+        return new ApiReturnedPostMessage(var0);
+      }
+    )
+  );
+}
 function update2(model, msg) {
-  if (msg instanceof UserIncrementedCount) {
-    return [model.withFields({ count: model.count + 1 }), get_cat()];
-  } else if (msg instanceof UserDecrementedCount) {
-    return [model.withFields({ count: model.count - 1 }), none()];
-  } else if (msg instanceof UserGetMessage) {
-    return [model, get_message()];
-  } else if (msg instanceof UserGetMessages) {
+  if (msg instanceof UserGetMessages) {
     return [model, get_messages()];
-  } else if (msg instanceof ApiReturnedCat && msg[0].isOk()) {
-    let cat = msg[0][0];
-    return [
-      model.withFields({ cats: prepend(cat, model.cats) }),
-      none()
-    ];
-  } else if (msg instanceof ApiReturnedCat && !msg[0].isOk()) {
-    return [model, none()];
+  } else if (msg instanceof UserUpdatedMessage) {
+    let input2 = msg[0];
+    debug(input2);
+    return [model.withFields({ input_value: input2 }), none()];
+  } else if (msg instanceof UserSendMessage) {
+    return [model, post_message()];
   } else if (msg instanceof ApiReturnedMessage && msg[0].isOk()) {
     let msg$1 = msg[0][0];
     debug(msg$1);
@@ -3033,34 +3149,50 @@ function update2(model, msg) {
   } else if (msg instanceof ApiReturnedMessages && msg[0].isOk()) {
     let msgs = msg[0][0];
     debug(msgs);
+    return [model.withFields({ messages: msgs }), none()];
+  } else if (msg instanceof ApiReturnedPostMessage && msg[0].isOk()) {
+    debug("posted");
     return [model, none()];
   } else if (msg instanceof ApiReturnedMessage && !msg[0].isOk()) {
+    return [model, none()];
+  } else if (msg instanceof ApiReturnedMessages && !msg[0].isOk()) {
     return [model, none()];
   } else {
     return [model, none()];
   }
 }
-function view(model) {
-  let count = to_string2(model.count);
+function message_h(message) {
   return div(
     toList([]),
     toList([
-      button(
-        toList([on_click(new UserIncrementedCount())]),
-        toList([text("+")])
+      text(message.text),
+      text(" "),
+      text(message.author)
+    ])
+  );
+}
+function messages_h(messages) {
+  return div(toList([]), map2(messages, message_h));
+}
+function view(model) {
+  return div(
+    toList([]),
+    toList([
+      input(
+        toList([
+          value(model.input_value),
+          on_input((var0) => {
+            return new UserUpdatedMessage(var0);
+          })
+        ])
       ),
-      text(count),
       button(
-        toList([on_click(new UserDecrementedCount())]),
-        toList([text("-")])
-      ),
-      button(
-        toList([on_click(new UserGetMessage())]),
-        toList([text("get-message")])
+        toList([on_click(new UserSendMessage())]),
+        toList([text("Send")])
       ),
       button(
         toList([on_click(new UserGetMessages())]),
-        toList([text("get-messages")])
+        toList([text("Update messages")])
       ),
       div(
         toList([]),
@@ -3072,7 +3204,8 @@ function view(model) {
             );
           }
         )
-      )
+      ),
+      messages_h(model.messages)
     ])
   );
 }
