@@ -1,3 +1,4 @@
+import birl
 import gleam/dynamic
 import gleam/io
 import gleam/list
@@ -29,22 +30,19 @@ pub type Model {
 }
 
 fn init(_flags) -> #(Model, effect.Effect(Msg)) {
-  #(Model(0, [], [], "Enter a message", "Your name"), effect.none())
+  #(Model(0, [], [], "", ""), get_messages())
 }
 
 pub type Msg {
-  UserGetMessages
   UserUpdatedMessage(String)
   UserUpdatedAuthor(String)
   UserSendMessage
-  ApiReturnedMessage(Result(message.Message, lustre_http.HttpError))
   ApiReturnedMessages(Result(List(message.Message), lustre_http.HttpError))
   ApiReturnedPostMessage(Result(Nil, lustre_http.HttpError))
 }
 
 pub fn update(model: Model, msg: Msg) -> #(Model, effect.Effect(Msg)) {
   case msg {
-    UserGetMessages -> #(model, get_messages())
     UserUpdatedMessage(input) -> {
       io.debug(input)
       #(Model(..model, input_message: input), effect.none())
@@ -56,19 +54,14 @@ pub fn update(model: Model, msg: Msg) -> #(Model, effect.Effect(Msg)) {
     UserSendMessage -> {
       #(model, post_message(model.input_message, model.input_author))
     }
-    ApiReturnedMessage(Ok(msg)) -> {
-      io.debug(msg)
-      #(model, effect.none())
-    }
     ApiReturnedMessages(Ok(msgs)) -> {
       io.debug(msgs)
       #(Model(..model, messages: msgs), effect.none())
     }
     ApiReturnedPostMessage(Ok(_)) -> {
       io.debug("posted")
-      #(model, effect.none())
+      #(model, get_messages())
     }
-    ApiReturnedMessage(Error(_)) -> #(model, effect.none())
     ApiReturnedMessages(Error(_)) -> #(model, effect.none())
     ApiReturnedPostMessage(Error(_)) -> #(model, effect.none())
   }
@@ -89,37 +82,55 @@ fn post_message(input_message: String, input_author) -> effect.Effect(Msg) {
   )
 }
 
-fn messages_h(messages: List(message.Message)) -> element.Element(Msg) {
+fn messages_view(messages: List(message.Message)) -> element.Element(Msg) {
   let message_h = fn(message: message.Message) -> element.Element(Msg) {
-    html.div([], [
-      element.text(message.text),
-      element.text(" "),
-      element.text(message.author),
+    html.div([attribute.class("flex m-1")], [
+      html.div([attribute.class("w-1/3 px-2")], [
+        element.text(message.unix_date |> birl.from_unix |> birl.to_naive),
+      ]),
+      html.div([attribute.class("w-1/3 px-2")], [element.text(message.text)]),
+      html.div([attribute.class("w-1/3 px-2")], [element.text(message.author)]),
     ])
   }
   html.div([], list.map(messages, message_h))
 }
 
 pub fn view(model: Model) -> element.Element(Msg) {
-  html.div([], [
-    html.input([
-      attribute.value(model.input_message),
-      event.on_input(UserUpdatedMessage),
+  html.div([attribute.class("flex flex-col")], [
+    html.div([attribute.class("flex")], [
+      html.div([attribute.class("w-1/3 px-2")], [
+        html.input([
+          attribute.class(
+            "shadow appearance-none border rounded py-2 px-3 text-gray-700",
+          ),
+          attribute.value(model.input_message),
+          attribute.placeholder("Your message"),
+          event.on_input(UserUpdatedMessage),
+        ]),
+      ]),
+      html.div([attribute.class("w-1/3 px-2")], [
+        html.input([
+          attribute.class(
+            "shadow appearance-none border rounded py-2 px-3 text-gray-700",
+          ),
+          attribute.value(model.input_author),
+          attribute.placeholder("Your Name"),
+          event.on_input(UserUpdatedAuthor),
+        ]),
+      ]),
+      html.div([attribute.class("w-1/3 px-2")], [
+        html.button(
+          [
+            attribute.type_("button"),
+            attribute.class(
+              "bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded",
+            ),
+            event.on_click(UserSendMessage),
+          ],
+          [element.text("Send")],
+        ),
+      ]),
     ]),
-    html.input([
-      attribute.value(model.input_author),
-      event.on_input(UserUpdatedAuthor),
-    ]),
-    html.button([event.on_click(UserSendMessage)], [element.text("Send")]),
-    html.button([event.on_click(UserGetMessages)], [
-      element.text("Update messages"),
-    ]),
-    html.div(
-      [],
-      list.map(model.cats, fn(cat) {
-        html.img([attribute.src("https://cataas.com/cat/" <> cat)])
-      }),
-    ),
-    messages_h(model.messages),
+    html.div([], [messages_view(model.messages)]),
   ])
 }

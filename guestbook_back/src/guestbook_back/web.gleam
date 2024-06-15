@@ -9,6 +9,8 @@ fn cors() {
   |> cors.allow_origin("http://localhost:1234")
   |> cors.allow_method(http.Get)
   |> cors.allow_method(http.Post)
+  |> cors.allow_header("content-type")
+  |> cors.allow_header("origin")
 }
 
 /// The middleware stack that the request handler uses. The stack is itself a

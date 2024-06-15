@@ -40,10 +40,10 @@ var List = class {
     return desired === 0;
   }
   countLength() {
-    let length4 = 0;
+    let length5 = 0;
     for (let _ of this)
-      length4++;
-    return length4;
+      length5++;
+    return length5;
   }
 };
 function prepend(element2, tail) {
@@ -216,6 +216,23 @@ function structurallyCompatibleObjects(a, b) {
     return false;
   return a.constructor === b.constructor;
 }
+function remainderInt(a, b) {
+  if (b === 0) {
+    return 0;
+  } else {
+    return a % b;
+  }
+}
+function divideInt(a, b) {
+  return Math.trunc(divideFloat(a, b));
+}
+function divideFloat(a, b) {
+  if (b === 0) {
+    return 0;
+  } else {
+    return a / b;
+  }
+}
 function makeError(variant, module, line, fn, message, extra) {
   let error = new globalThis.Error(message);
   error.gleam_error = variant;
@@ -225,6 +242,15 @@ function makeError(variant, module, line, fn, message, extra) {
   for (let k in extra)
     error[k] = extra[k];
   return error;
+}
+
+// build/dev/javascript/gleam_stdlib/gleam/bool.mjs
+function guard(requirement, consequence, alternative) {
+  if (requirement) {
+    return consequence;
+  } else {
+    return alternative();
+  }
 }
 
 // build/dev/javascript/gleam_stdlib/gleam/option.mjs
@@ -296,6 +322,450 @@ function compile(pattern, options) {
 }
 function scan(regex, string3) {
   return regex_scan(regex, string3);
+}
+
+// build/dev/javascript/gleam_stdlib/gleam/pair.mjs
+function second(pair) {
+  let a = pair[1];
+  return a;
+}
+
+// build/dev/javascript/gleam_stdlib/gleam/list.mjs
+function do_reverse(loop$remaining, loop$accumulator) {
+  while (true) {
+    let remaining = loop$remaining;
+    let accumulator = loop$accumulator;
+    if (remaining.hasLength(0)) {
+      return accumulator;
+    } else {
+      let item = remaining.head;
+      let rest$1 = remaining.tail;
+      loop$remaining = rest$1;
+      loop$accumulator = prepend(item, accumulator);
+    }
+  }
+}
+function reverse(xs) {
+  return do_reverse(xs, toList([]));
+}
+function first(list3) {
+  if (list3.hasLength(0)) {
+    return new Error(void 0);
+  } else {
+    let x = list3.head;
+    return new Ok(x);
+  }
+}
+function do_filter(loop$list, loop$fun, loop$acc) {
+  while (true) {
+    let list3 = loop$list;
+    let fun = loop$fun;
+    let acc = loop$acc;
+    if (list3.hasLength(0)) {
+      return reverse(acc);
+    } else {
+      let x = list3.head;
+      let xs = list3.tail;
+      let new_acc = (() => {
+        let $ = fun(x);
+        if ($) {
+          return prepend(x, acc);
+        } else {
+          return acc;
+        }
+      })();
+      loop$list = xs;
+      loop$fun = fun;
+      loop$acc = new_acc;
+    }
+  }
+}
+function filter(list3, predicate) {
+  return do_filter(list3, predicate, toList([]));
+}
+function do_map(loop$list, loop$fun, loop$acc) {
+  while (true) {
+    let list3 = loop$list;
+    let fun = loop$fun;
+    let acc = loop$acc;
+    if (list3.hasLength(0)) {
+      return reverse(acc);
+    } else {
+      let x = list3.head;
+      let xs = list3.tail;
+      loop$list = xs;
+      loop$fun = fun;
+      loop$acc = prepend(fun(x), acc);
+    }
+  }
+}
+function map2(list3, fun) {
+  return do_map(list3, fun, toList([]));
+}
+function do_try_map(loop$list, loop$fun, loop$acc) {
+  while (true) {
+    let list3 = loop$list;
+    let fun = loop$fun;
+    let acc = loop$acc;
+    if (list3.hasLength(0)) {
+      return new Ok(reverse(acc));
+    } else {
+      let x = list3.head;
+      let xs = list3.tail;
+      let $ = fun(x);
+      if ($.isOk()) {
+        let y = $[0];
+        loop$list = xs;
+        loop$fun = fun;
+        loop$acc = prepend(y, acc);
+      } else {
+        let error = $[0];
+        return new Error(error);
+      }
+    }
+  }
+}
+function try_map(list3, fun) {
+  return do_try_map(list3, fun, toList([]));
+}
+function drop(loop$list, loop$n) {
+  while (true) {
+    let list3 = loop$list;
+    let n = loop$n;
+    let $ = n <= 0;
+    if ($) {
+      return list3;
+    } else {
+      if (list3.hasLength(0)) {
+        return toList([]);
+      } else {
+        let xs = list3.tail;
+        loop$list = xs;
+        loop$n = n - 1;
+      }
+    }
+  }
+}
+function do_take(loop$list, loop$n, loop$acc) {
+  while (true) {
+    let list3 = loop$list;
+    let n = loop$n;
+    let acc = loop$acc;
+    let $ = n <= 0;
+    if ($) {
+      return reverse(acc);
+    } else {
+      if (list3.hasLength(0)) {
+        return reverse(acc);
+      } else {
+        let x = list3.head;
+        let xs = list3.tail;
+        loop$list = xs;
+        loop$n = n - 1;
+        loop$acc = prepend(x, acc);
+      }
+    }
+  }
+}
+function take(list3, n) {
+  return do_take(list3, n, toList([]));
+}
+function do_append(loop$first, loop$second) {
+  while (true) {
+    let first3 = loop$first;
+    let second3 = loop$second;
+    if (first3.hasLength(0)) {
+      return second3;
+    } else {
+      let item = first3.head;
+      let rest$1 = first3.tail;
+      loop$first = rest$1;
+      loop$second = prepend(item, second3);
+    }
+  }
+}
+function append(first3, second3) {
+  return do_append(reverse(first3), second3);
+}
+function reverse_and_prepend(loop$prefix, loop$suffix) {
+  while (true) {
+    let prefix = loop$prefix;
+    let suffix = loop$suffix;
+    if (prefix.hasLength(0)) {
+      return suffix;
+    } else {
+      let first$1 = prefix.head;
+      let rest$1 = prefix.tail;
+      loop$prefix = rest$1;
+      loop$suffix = prepend(first$1, suffix);
+    }
+  }
+}
+function do_concat(loop$lists, loop$acc) {
+  while (true) {
+    let lists = loop$lists;
+    let acc = loop$acc;
+    if (lists.hasLength(0)) {
+      return reverse(acc);
+    } else {
+      let list3 = lists.head;
+      let further_lists = lists.tail;
+      loop$lists = further_lists;
+      loop$acc = reverse_and_prepend(list3, acc);
+    }
+  }
+}
+function concat(lists) {
+  return do_concat(lists, toList([]));
+}
+function fold(loop$list, loop$initial, loop$fun) {
+  while (true) {
+    let list3 = loop$list;
+    let initial = loop$initial;
+    let fun = loop$fun;
+    if (list3.hasLength(0)) {
+      return initial;
+    } else {
+      let x = list3.head;
+      let rest$1 = list3.tail;
+      loop$list = rest$1;
+      loop$initial = fun(initial, x);
+      loop$fun = fun;
+    }
+  }
+}
+function do_repeat(loop$a, loop$times, loop$acc) {
+  while (true) {
+    let a = loop$a;
+    let times = loop$times;
+    let acc = loop$acc;
+    let $ = times <= 0;
+    if ($) {
+      return acc;
+    } else {
+      loop$a = a;
+      loop$times = times - 1;
+      loop$acc = prepend(a, acc);
+    }
+  }
+}
+function repeat(a, times) {
+  return do_repeat(a, times, toList([]));
+}
+function key_set(list3, key, value3) {
+  if (list3.hasLength(0)) {
+    return toList([[key, value3]]);
+  } else if (list3.atLeastLength(1) && isEqual(list3.head[0], key)) {
+    let k = list3.head[0];
+    let rest$1 = list3.tail;
+    return prepend([key, value3], rest$1);
+  } else {
+    let first$1 = list3.head;
+    let rest$1 = list3.tail;
+    return prepend(first$1, key_set(rest$1, key, value3));
+  }
+}
+
+// build/dev/javascript/gleam_stdlib/gleam/result.mjs
+function map3(result, fun) {
+  if (result.isOk()) {
+    let x = result[0];
+    return new Ok(fun(x));
+  } else {
+    let e = result[0];
+    return new Error(e);
+  }
+}
+function map_error(result, fun) {
+  if (result.isOk()) {
+    let x = result[0];
+    return new Ok(x);
+  } else {
+    let error = result[0];
+    return new Error(fun(error));
+  }
+}
+function try$(result, fun) {
+  if (result.isOk()) {
+    let x = result[0];
+    return fun(x);
+  } else {
+    let e = result[0];
+    return new Error(e);
+  }
+}
+function then$(result, fun) {
+  return try$(result, fun);
+}
+function unwrap2(result, default$) {
+  if (result.isOk()) {
+    let v = result[0];
+    return v;
+  } else {
+    return default$;
+  }
+}
+function nil_error(result) {
+  return map_error(result, (_) => {
+    return void 0;
+  });
+}
+function replace(result, value3) {
+  if (result.isOk()) {
+    return new Ok(value3);
+  } else {
+    let error = result[0];
+    return new Error(error);
+  }
+}
+
+// build/dev/javascript/gleam_stdlib/gleam/string_builder.mjs
+function from_strings(strings) {
+  return concat2(strings);
+}
+function to_string(builder) {
+  return identity(builder);
+}
+
+// build/dev/javascript/gleam_stdlib/gleam/dynamic.mjs
+var DecodeError = class extends CustomType {
+  constructor(expected, found, path) {
+    super();
+    this.expected = expected;
+    this.found = found;
+    this.path = path;
+  }
+};
+function from(a) {
+  return identity(a);
+}
+function string(data) {
+  return decode_string(data);
+}
+function classify(data) {
+  return classify_dynamic(data);
+}
+function int(data) {
+  return decode_int(data);
+}
+function shallow_list(value3) {
+  return decode_list(value3);
+}
+function any(decoders) {
+  return (data) => {
+    if (decoders.hasLength(0)) {
+      return new Error(
+        toList([new DecodeError("another type", classify(data), toList([]))])
+      );
+    } else {
+      let decoder2 = decoders.head;
+      let decoders$1 = decoders.tail;
+      let $ = decoder2(data);
+      if ($.isOk()) {
+        let decoded = $[0];
+        return new Ok(decoded);
+      } else {
+        return any(decoders$1)(data);
+      }
+    }
+  };
+}
+function all_errors(result) {
+  if (result.isOk()) {
+    return toList([]);
+  } else {
+    let errors = result[0];
+    return errors;
+  }
+}
+function push_path(error, name) {
+  let name$1 = from(name);
+  let decoder2 = any(
+    toList([string, (x) => {
+      return map3(int(x), to_string2);
+    }])
+  );
+  let name$2 = (() => {
+    let $ = decoder2(name$1);
+    if ($.isOk()) {
+      let name$22 = $[0];
+      return name$22;
+    } else {
+      let _pipe = toList(["<", classify(name$1), ">"]);
+      let _pipe$1 = from_strings(_pipe);
+      return to_string(_pipe$1);
+    }
+  })();
+  return error.withFields({ path: prepend(name$2, error.path) });
+}
+function list(decoder_type) {
+  return (dynamic) => {
+    return try$(
+      shallow_list(dynamic),
+      (list3) => {
+        let _pipe = list3;
+        let _pipe$1 = try_map(_pipe, decoder_type);
+        return map_errors(
+          _pipe$1,
+          (_capture) => {
+            return push_path(_capture, "*");
+          }
+        );
+      }
+    );
+  };
+}
+function map_errors(result, f) {
+  return map_error(
+    result,
+    (_capture) => {
+      return map2(_capture, f);
+    }
+  );
+}
+function field(name, inner_type) {
+  return (value3) => {
+    let missing_field_error = new DecodeError("field", "nothing", toList([]));
+    return try$(
+      decode_field(value3, name),
+      (maybe_inner) => {
+        let _pipe = maybe_inner;
+        let _pipe$1 = to_result(_pipe, toList([missing_field_error]));
+        let _pipe$2 = try$(_pipe$1, inner_type);
+        return map_errors(
+          _pipe$2,
+          (_capture) => {
+            return push_path(_capture, name);
+          }
+        );
+      }
+    );
+  };
+}
+function decode4(constructor, t1, t2, t3, t4) {
+  return (x) => {
+    let $ = t1(x);
+    let $1 = t2(x);
+    let $2 = t3(x);
+    let $3 = t4(x);
+    if ($.isOk() && $1.isOk() && $2.isOk() && $3.isOk()) {
+      let a = $[0];
+      let b = $1[0];
+      let c = $2[0];
+      let d = $3[0];
+      return new Ok(constructor(a, b, c, d));
+    } else {
+      let a = $;
+      let b = $1;
+      let c = $2;
+      let d = $3;
+      return new Error(
+        concat(
+          toList([all_errors(a), all_errors(b), all_errors(c), all_errors(d)])
+        )
+      );
+    }
+  };
 }
 
 // build/dev/javascript/gleam_stdlib/dict.mjs
@@ -1008,8 +1478,31 @@ function parse_int(value3) {
     return new Error(Nil);
   }
 }
-function to_string(term) {
+function to_string3(term) {
   return term.toString();
+}
+function string_length(string3) {
+  if (string3 === "") {
+    return 0;
+  }
+  const iterator = graphemes_iterator(string3);
+  if (iterator) {
+    let i = 0;
+    for (const _ of iterator) {
+      i++;
+    }
+    return i;
+  } else {
+    return string3.match(/./gsu).length;
+  }
+}
+function graphemes(string3) {
+  const iterator = graphemes_iterator(string3);
+  if (iterator) {
+    return List.fromArray(Array.from(iterator).map((item) => item.segment));
+  } else {
+    return List.fromArray(string3.match(/./gsu));
+  }
 }
 function graphemes_iterator(string3) {
   if (Intl && Intl.Segmenter) {
@@ -1017,15 +1510,15 @@ function graphemes_iterator(string3) {
   }
 }
 function pop_grapheme(string3) {
-  let first2;
+  let first3;
   const iterator = graphemes_iterator(string3);
   if (iterator) {
-    first2 = iterator.next().value?.segment;
+    first3 = iterator.next().value?.segment;
   } else {
-    first2 = string3.match(/./su)?.[0];
+    first3 = string3.match(/./su)?.[0];
   }
-  if (first2) {
-    return new Ok([first2, string3.slice(first2.length)]);
+  if (first3) {
+    return new Ok([first3, string3.slice(first3.length)]);
   } else {
     return new Error(Nil);
   }
@@ -1033,7 +1526,17 @@ function pop_grapheme(string3) {
 function lowercase(string3) {
   return string3.toLowerCase();
 }
-function concat(xs) {
+function join(xs, separator) {
+  const iterator = xs[Symbol.iterator]();
+  let result = iterator.next().value || "";
+  let current = iterator.next();
+  while (!current.done) {
+    result = result + separator + current.value;
+    current = iterator.next();
+  }
+  return result;
+}
+function concat2(xs) {
   let result = "";
   for (const x of xs) {
     result = result + x;
@@ -1199,12 +1702,12 @@ function inspect(v) {
 }
 function inspectDict(map6) {
   let body = "dict.from_list([";
-  let first2 = true;
+  let first3 = true;
   map6.forEach((value3, key) => {
-    if (!first2)
+    if (!first3)
       body = body + ", ";
     body = body + "#(" + inspect(key) + ", " + inspect(value3) + ")";
-    first2 = false;
+    first3 = false;
   });
   return body + "])";
 }
@@ -1225,8 +1728,8 @@ function inspectCustomType(record) {
   }).join(", ");
   return props ? `${record.constructor.name}(${props})` : record.constructor.name;
 }
-function inspectList(list2) {
-  return `[${list2.toArray().map(inspect).join(", ")}]`;
+function inspectList(list3) {
+  return `[${list3.toArray().map(inspect).join(", ")}]`;
 }
 function inspectBitArray(bits) {
   return `<<${Array.from(bits.buffer).join(", ")}>>`;
@@ -1236,373 +1739,162 @@ function inspectUtfCodepoint(codepoint2) {
 }
 
 // build/dev/javascript/gleam_stdlib/gleam/int.mjs
+function absolute_value(x) {
+  let $ = x >= 0;
+  if ($) {
+    return x;
+  } else {
+    return x * -1;
+  }
+}
 function parse(string3) {
   return parse_int(string3);
 }
 function to_string2(x) {
-  return to_string(x);
+  return to_string3(x);
 }
 
-// build/dev/javascript/gleam_stdlib/gleam/pair.mjs
-function second(pair) {
-  let a = pair[1];
-  return a;
-}
-
-// build/dev/javascript/gleam_stdlib/gleam/list.mjs
-function do_reverse(loop$remaining, loop$accumulator) {
-  while (true) {
-    let remaining = loop$remaining;
-    let accumulator = loop$accumulator;
-    if (remaining.hasLength(0)) {
-      return accumulator;
-    } else {
-      let item = remaining.head;
-      let rest$1 = remaining.tail;
-      loop$remaining = rest$1;
-      loop$accumulator = prepend(item, accumulator);
-    }
-  }
-}
-function reverse(xs) {
-  return do_reverse(xs, toList([]));
-}
-function first(list2) {
-  if (list2.hasLength(0)) {
-    return new Error(void 0);
-  } else {
-    let x = list2.head;
-    return new Ok(x);
-  }
-}
-function do_map(loop$list, loop$fun, loop$acc) {
-  while (true) {
-    let list2 = loop$list;
-    let fun = loop$fun;
-    let acc = loop$acc;
-    if (list2.hasLength(0)) {
-      return reverse(acc);
-    } else {
-      let x = list2.head;
-      let xs = list2.tail;
-      loop$list = xs;
-      loop$fun = fun;
-      loop$acc = prepend(fun(x), acc);
-    }
-  }
-}
-function map2(list2, fun) {
-  return do_map(list2, fun, toList([]));
-}
-function do_try_map(loop$list, loop$fun, loop$acc) {
-  while (true) {
-    let list2 = loop$list;
-    let fun = loop$fun;
-    let acc = loop$acc;
-    if (list2.hasLength(0)) {
-      return new Ok(reverse(acc));
-    } else {
-      let x = list2.head;
-      let xs = list2.tail;
-      let $ = fun(x);
-      if ($.isOk()) {
-        let y = $[0];
-        loop$list = xs;
-        loop$fun = fun;
-        loop$acc = prepend(y, acc);
-      } else {
-        let error = $[0];
-        return new Error(error);
-      }
-    }
-  }
-}
-function try_map(list2, fun) {
-  return do_try_map(list2, fun, toList([]));
-}
-function do_append(loop$first, loop$second) {
-  while (true) {
-    let first2 = loop$first;
-    let second2 = loop$second;
-    if (first2.hasLength(0)) {
-      return second2;
-    } else {
-      let item = first2.head;
-      let rest$1 = first2.tail;
-      loop$first = rest$1;
-      loop$second = prepend(item, second2);
-    }
-  }
-}
-function append(first2, second2) {
-  return do_append(reverse(first2), second2);
-}
-function reverse_and_prepend(loop$prefix, loop$suffix) {
-  while (true) {
-    let prefix = loop$prefix;
-    let suffix = loop$suffix;
-    if (prefix.hasLength(0)) {
-      return suffix;
-    } else {
-      let first$1 = prefix.head;
-      let rest$1 = prefix.tail;
-      loop$prefix = rest$1;
-      loop$suffix = prepend(first$1, suffix);
-    }
-  }
-}
-function do_concat(loop$lists, loop$acc) {
-  while (true) {
-    let lists = loop$lists;
-    let acc = loop$acc;
-    if (lists.hasLength(0)) {
-      return reverse(acc);
-    } else {
-      let list2 = lists.head;
-      let further_lists = lists.tail;
-      loop$lists = further_lists;
-      loop$acc = reverse_and_prepend(list2, acc);
-    }
-  }
-}
-function concat2(lists) {
-  return do_concat(lists, toList([]));
-}
-function do_repeat(loop$a, loop$times, loop$acc) {
-  while (true) {
-    let a = loop$a;
-    let times = loop$times;
-    let acc = loop$acc;
-    let $ = times <= 0;
-    if ($) {
-      return acc;
-    } else {
-      loop$a = a;
-      loop$times = times - 1;
-      loop$acc = prepend(a, acc);
-    }
-  }
-}
-function repeat(a, times) {
-  return do_repeat(a, times, toList([]));
-}
-function key_set(list2, key, value3) {
-  if (list2.hasLength(0)) {
-    return toList([[key, value3]]);
-  } else if (list2.atLeastLength(1) && isEqual(list2.head[0], key)) {
-    let k = list2.head[0];
-    let rest$1 = list2.tail;
-    return prepend([key, value3], rest$1);
-  } else {
-    let first$1 = list2.head;
-    let rest$1 = list2.tail;
-    return prepend(first$1, key_set(rest$1, key, value3));
-  }
-}
-
-// build/dev/javascript/gleam_stdlib/gleam/result.mjs
-function map3(result, fun) {
-  if (result.isOk()) {
-    let x = result[0];
-    return new Ok(fun(x));
-  } else {
-    let e = result[0];
-    return new Error(e);
-  }
-}
-function map_error(result, fun) {
-  if (result.isOk()) {
-    let x = result[0];
-    return new Ok(x);
-  } else {
-    let error = result[0];
-    return new Error(fun(error));
-  }
-}
-function try$(result, fun) {
-  if (result.isOk()) {
-    let x = result[0];
-    return fun(x);
-  } else {
-    let e = result[0];
-    return new Error(e);
-  }
-}
-function then$(result, fun) {
-  return try$(result, fun);
-}
-function unwrap2(result, default$) {
-  if (result.isOk()) {
-    let v = result[0];
-    return v;
-  } else {
-    return default$;
-  }
-}
-function nil_error(result) {
-  return map_error(result, (_) => {
-    return void 0;
-  });
-}
-function replace(result, value3) {
-  if (result.isOk()) {
-    return new Ok(value3);
-  } else {
-    let error = result[0];
-    return new Error(error);
-  }
-}
-
-// build/dev/javascript/gleam_stdlib/gleam/string_builder.mjs
-function from_strings(strings) {
-  return concat(strings);
-}
-function to_string3(builder) {
-  return identity(builder);
-}
-
-// build/dev/javascript/gleam_stdlib/gleam/dynamic.mjs
-var DecodeError = class extends CustomType {
-  constructor(expected, found, path) {
+// build/dev/javascript/gleam_stdlib/gleam/iterator.mjs
+var Stop = class extends CustomType {
+};
+var Continue2 = class extends CustomType {
+  constructor(x0, x1) {
     super();
-    this.expected = expected;
-    this.found = found;
-    this.path = path;
+    this[0] = x0;
+    this[1] = x1;
   }
 };
-function from(a) {
-  return identity(a);
+var Iterator = class extends CustomType {
+  constructor(continuation) {
+    super();
+    this.continuation = continuation;
+  }
+};
+var Next = class extends CustomType {
+  constructor(element2, accumulator) {
+    super();
+    this.element = element2;
+    this.accumulator = accumulator;
+  }
+};
+function stop() {
+  return new Stop();
 }
-function string(data) {
-  return decode_string(data);
-}
-function classify(data) {
-  return classify_dynamic(data);
-}
-function int(data) {
-  return decode_int(data);
-}
-function shallow_list(value3) {
-  return decode_list(value3);
-}
-function any(decoders) {
-  return (data) => {
-    if (decoders.hasLength(0)) {
-      return new Error(
-        toList([new DecodeError("another type", classify(data), toList([]))])
-      );
+function do_unfold(initial, f) {
+  return () => {
+    let $ = f(initial);
+    if ($ instanceof Next) {
+      let x = $.element;
+      let acc = $.accumulator;
+      return new Continue2(x, do_unfold(acc, f));
     } else {
-      let decoder2 = decoders.head;
-      let decoders$1 = decoders.tail;
-      let $ = decoder2(data);
-      if ($.isOk()) {
-        let decoded = $[0];
-        return new Ok(decoded);
-      } else {
-        return any(decoders$1)(data);
-      }
+      return new Stop();
     }
   };
 }
-function all_errors(result) {
-  if (result.isOk()) {
-    return toList([]);
-  } else {
-    let errors = result[0];
-    return errors;
+function unfold(initial, f) {
+  let _pipe = initial;
+  let _pipe$1 = do_unfold(_pipe, f);
+  return new Iterator(_pipe$1);
+}
+function repeatedly(f) {
+  return unfold(void 0, (_) => {
+    return new Next(f(), void 0);
+  });
+}
+function repeat2(x) {
+  return repeatedly(() => {
+    return x;
+  });
+}
+function do_fold(loop$continuation, loop$f, loop$accumulator) {
+  while (true) {
+    let continuation = loop$continuation;
+    let f = loop$f;
+    let accumulator = loop$accumulator;
+    let $ = continuation();
+    if ($ instanceof Continue2) {
+      let elem = $[0];
+      let next = $[1];
+      loop$continuation = next;
+      loop$f = f;
+      loop$accumulator = f(accumulator, elem);
+    } else {
+      return accumulator;
+    }
   }
 }
-function push_path(error, name) {
-  let name$1 = from(name);
-  let decoder2 = any(
-    toList([string, (x) => {
-      return map3(int(x), to_string2);
-    }])
-  );
-  let name$2 = (() => {
-    let $ = decoder2(name$1);
-    if ($.isOk()) {
-      let name$22 = $[0];
-      return name$22;
-    } else {
-      let _pipe = toList(["<", classify(name$1), ">"]);
-      let _pipe$1 = from_strings(_pipe);
-      return to_string3(_pipe$1);
-    }
-  })();
-  return error.withFields({ path: prepend(name$2, error.path) });
+function fold2(iterator, initial, f) {
+  let _pipe = iterator.continuation;
+  return do_fold(_pipe, f, initial);
 }
-function list(decoder_type) {
-  return (dynamic) => {
-    return try$(
-      shallow_list(dynamic),
-      (list2) => {
-        let _pipe = list2;
-        let _pipe$1 = try_map(_pipe, decoder_type);
-        return map_errors(
-          _pipe$1,
-          (_capture) => {
-            return push_path(_capture, "*");
-          }
-        );
-      }
-    );
-  };
-}
-function map_errors(result, f) {
-  return map_error(
-    result,
-    (_capture) => {
-      return map2(_capture, f);
+function to_list(iterator) {
+  let _pipe = iterator;
+  let _pipe$1 = fold2(
+    _pipe,
+    toList([]),
+    (acc, e) => {
+      return prepend(e, acc);
     }
   );
+  return reverse(_pipe$1);
 }
-function field(name, inner_type) {
-  return (value3) => {
-    let missing_field_error = new DecodeError("field", "nothing", toList([]));
-    return try$(
-      decode_field(value3, name),
-      (maybe_inner) => {
-        let _pipe = maybe_inner;
-        let _pipe$1 = to_result(_pipe, toList([missing_field_error]));
-        let _pipe$2 = try$(_pipe$1, inner_type);
-        return map_errors(
-          _pipe$2,
-          (_capture) => {
-            return push_path(_capture, name);
-          }
-        );
-      }
-    );
-  };
-}
-function decode4(constructor, t1, t2, t3, t4) {
-  return (x) => {
-    let $ = t1(x);
-    let $1 = t2(x);
-    let $2 = t3(x);
-    let $3 = t4(x);
-    if ($.isOk() && $1.isOk() && $2.isOk() && $3.isOk()) {
-      let a = $[0];
-      let b = $1[0];
-      let c = $2[0];
-      let d = $3[0];
-      return new Ok(constructor(a, b, c, d));
+function do_take2(continuation, desired) {
+  return () => {
+    let $ = desired > 0;
+    if (!$) {
+      return new Stop();
     } else {
-      let a = $;
-      let b = $1;
-      let c = $2;
-      let d = $3;
-      return new Error(
-        concat2(
-          toList([all_errors(a), all_errors(b), all_errors(c), all_errors(d)])
-        )
-      );
+      let $1 = continuation();
+      if ($1 instanceof Stop) {
+        return new Stop();
+      } else {
+        let e = $1[0];
+        let next = $1[1];
+        return new Continue2(e, do_take2(next, desired - 1));
+      }
     }
   };
+}
+function take2(iterator, desired) {
+  let _pipe = iterator.continuation;
+  let _pipe$1 = do_take2(_pipe, desired);
+  return new Iterator(_pipe$1);
+}
+function do_append2(first3, second3) {
+  let $ = first3();
+  if ($ instanceof Continue2) {
+    let e = $[0];
+    let first$1 = $[1];
+    return new Continue2(e, () => {
+      return do_append2(first$1, second3);
+    });
+  } else {
+    return second3();
+  }
+}
+function append2(first3, second3) {
+  let _pipe = () => {
+    return do_append2(first3.continuation, second3.continuation);
+  };
+  return new Iterator(_pipe);
+}
+function once(f) {
+  let _pipe = () => {
+    return new Continue2(f(), stop);
+  };
+  return new Iterator(_pipe);
+}
+function single(elem) {
+  return once(() => {
+    return elem;
+  });
 }
 
 // build/dev/javascript/gleam_stdlib/gleam/string.mjs
+function length2(string3) {
+  return string_length(string3);
+}
 function lowercase2(string3) {
   return lowercase(string3);
 }
@@ -1612,15 +1904,838 @@ function starts_with2(string3, prefix) {
 function concat3(strings) {
   let _pipe = strings;
   let _pipe$1 = from_strings(_pipe);
-  return to_string3(_pipe$1);
+  return to_string(_pipe$1);
+}
+function join2(strings, separator) {
+  return join(strings, separator);
 }
 function pop_grapheme2(string3) {
   return pop_grapheme(string3);
 }
+function do_slice(string3, idx, len) {
+  let _pipe = string3;
+  let _pipe$1 = graphemes(_pipe);
+  let _pipe$2 = drop(_pipe$1, idx);
+  let _pipe$3 = take(_pipe$2, len);
+  return concat3(_pipe$3);
+}
+function slice(string3, idx, len) {
+  let $ = len < 0;
+  if ($) {
+    return "";
+  } else {
+    let $1 = idx < 0;
+    if ($1) {
+      let translated_idx = length2(string3) + idx;
+      let $2 = translated_idx < 0;
+      if ($2) {
+        return "";
+      } else {
+        return do_slice(string3, translated_idx, len);
+      }
+    } else {
+      return do_slice(string3, idx, len);
+    }
+  }
+}
+function padding(size, pad_string) {
+  let pad_length = length2(pad_string);
+  let num_pads = divideInt(size, pad_length);
+  let extra = remainderInt(size, pad_length);
+  let _pipe = repeat2(pad_string);
+  let _pipe$1 = take2(_pipe, num_pads);
+  return append2(
+    _pipe$1,
+    single(slice(pad_string, 0, extra))
+  );
+}
+function pad_left(string3, desired_length, pad_string) {
+  let current_length = length2(string3);
+  let to_pad_length = desired_length - current_length;
+  let _pipe = padding(to_pad_length, pad_string);
+  let _pipe$1 = append2(_pipe, single(string3));
+  let _pipe$2 = to_list(_pipe$1);
+  return concat3(_pipe$2);
+}
 function inspect2(term) {
   let _pipe = inspect(term);
-  return to_string3(_pipe);
+  return to_string(_pipe);
 }
+
+// build/dev/javascript/birl/birl/duration.mjs
+var Duration = class extends CustomType {
+  constructor(x0) {
+    super();
+    this[0] = x0;
+  }
+};
+var MicroSecond = class extends CustomType {
+};
+var MilliSecond = class extends CustomType {
+};
+var Second = class extends CustomType {
+};
+var Minute = class extends CustomType {
+};
+var Hour = class extends CustomType {
+};
+var Day = class extends CustomType {
+};
+var Week = class extends CustomType {
+};
+var Month = class extends CustomType {
+};
+var Year = class extends CustomType {
+};
+function extract(duration, unit_value) {
+  return [divideInt(duration, unit_value), remainderInt(duration, unit_value)];
+}
+var milli_second = 1e3;
+var second2 = 1e6;
+var minute = 6e7;
+var hour = 36e8;
+var day = 864e8;
+var week = 6048e8;
+var month = 2592e9;
+var year = 31536e9;
+function new$2(values) {
+  let _pipe = values;
+  let _pipe$1 = fold(
+    _pipe,
+    0,
+    (total, current) => {
+      if (current[1] instanceof MicroSecond) {
+        let amount = current[0];
+        return total + amount;
+      } else if (current[1] instanceof MilliSecond) {
+        let amount = current[0];
+        return total + amount * milli_second;
+      } else if (current[1] instanceof Second) {
+        let amount = current[0];
+        return total + amount * second2;
+      } else if (current[1] instanceof Minute) {
+        let amount = current[0];
+        return total + amount * minute;
+      } else if (current[1] instanceof Hour) {
+        let amount = current[0];
+        return total + amount * hour;
+      } else if (current[1] instanceof Day) {
+        let amount = current[0];
+        return total + amount * day;
+      } else if (current[1] instanceof Week) {
+        let amount = current[0];
+        return total + amount * week;
+      } else if (current[1] instanceof Month) {
+        let amount = current[0];
+        return total + amount * month;
+      } else {
+        let amount = current[0];
+        return total + amount * year;
+      }
+    }
+  );
+  return new Duration(_pipe$1);
+}
+function decompose(duration) {
+  let value3 = duration[0];
+  let absolute_value2 = absolute_value(value3);
+  let $ = extract(absolute_value2, year);
+  let years$1 = $[0];
+  let remaining = $[1];
+  let $1 = extract(remaining, month);
+  let months$1 = $1[0];
+  let remaining$1 = $1[1];
+  let $2 = extract(remaining$1, week);
+  let weeks$1 = $2[0];
+  let remaining$2 = $2[1];
+  let $3 = extract(remaining$2, day);
+  let days$1 = $3[0];
+  let remaining$3 = $3[1];
+  let $4 = extract(remaining$3, hour);
+  let hours$1 = $4[0];
+  let remaining$4 = $4[1];
+  let $5 = extract(remaining$4, minute);
+  let minutes$1 = $5[0];
+  let remaining$5 = $5[1];
+  let $6 = extract(remaining$5, second2);
+  let seconds$1 = $6[0];
+  let remaining$6 = $6[1];
+  let $7 = extract(remaining$6, milli_second);
+  let milli_seconds$1 = $7[0];
+  let remaining$7 = $7[1];
+  let _pipe = toList([
+    [years$1, new Year()],
+    [months$1, new Month()],
+    [weeks$1, new Week()],
+    [days$1, new Day()],
+    [hours$1, new Hour()],
+    [minutes$1, new Minute()],
+    [seconds$1, new Second()],
+    [milli_seconds$1, new MilliSecond()],
+    [remaining$7, new MicroSecond()]
+  ]);
+  let _pipe$1 = filter(_pipe, (item) => {
+    return item[0] > 0;
+  });
+  return map2(
+    _pipe$1,
+    (item) => {
+      let $8 = value3 < 0;
+      if ($8) {
+        return [-1 * item[0], item[1]];
+      } else {
+        return item;
+      }
+    }
+  );
+}
+var unit_values = toList([
+  [new Year(), year],
+  [new Month(), month],
+  [new Week(), week],
+  [new Day(), day],
+  [new Hour(), hour],
+  [new Minute(), minute],
+  [new Second(), second2],
+  [new MilliSecond(), milli_second],
+  [new MicroSecond(), 1]
+]);
+var year_units = toList(["y", "year", "years"]);
+var month_units = toList(["mon", "month", "months"]);
+var week_units = toList(["w", "week", "weeks"]);
+var day_units = toList(["d", "day", "days"]);
+var hour_units = toList(["h", "hour", "hours"]);
+var minute_units = toList(["m", "min", "minute", "minutes"]);
+var second_units = toList(["s", "sec", "secs", "second", "seconds"]);
+var milli_second_units = toList([
+  "ms",
+  "msec",
+  "msecs",
+  "millisecond",
+  "milliseconds",
+  "milli-second",
+  "milli-seconds",
+  "milli_second",
+  "milli_seconds"
+]);
+var units = toList([
+  [new Year(), year_units],
+  [new Month(), month_units],
+  [new Week(), week_units],
+  [new Day(), day_units],
+  [new Hour(), hour_units],
+  [new Minute(), minute_units],
+  [new Second(), second_units],
+  [new MilliSecond(), milli_second_units]
+]);
+
+// build/dev/javascript/birl/birl/zones.mjs
+var list2 = toList([
+  ["Africa/Abidjan", 0],
+  ["Africa/Algiers", 3600],
+  ["Africa/Bissau", 0],
+  ["Africa/Cairo", 7200],
+  ["Africa/Casablanca", 3600],
+  ["Africa/Ceuta", 3600],
+  ["Africa/El_Aaiun", 3600],
+  ["Africa/Johannesburg", 7200],
+  ["Africa/Juba", 7200],
+  ["Africa/Khartoum", 7200],
+  ["Africa/Lagos", 3600],
+  ["Africa/Maputo", 7200],
+  ["Africa/Monrovia", 0],
+  ["Africa/Nairobi", 10800],
+  ["Africa/Ndjamena", 3600],
+  ["Africa/Sao_Tome", 0],
+  ["Africa/Tripoli", 7200],
+  ["Africa/Tunis", 3600],
+  ["Africa/Windhoek", 7200],
+  ["America/Adak", -36e3],
+  ["America/Anchorage", -32400],
+  ["America/Araguaina", -10800],
+  ["America/Argentina/Buenos_Aires", -10800],
+  ["America/Argentina/Catamarca", -10800],
+  ["America/Argentina/Cordoba", -10800],
+  ["America/Argentina/Jujuy", -10800],
+  ["America/Argentina/La_Rioja", -10800],
+  ["America/Argentina/Mendoza", -10800],
+  ["America/Argentina/Rio_Gallegos", -10800],
+  ["America/Argentina/Salta", -10800],
+  ["America/Argentina/San_Juan", -10800],
+  ["America/Argentina/San_Luis", -10800],
+  ["America/Argentina/Tucuman", -10800],
+  ["America/Argentina/Ushuaia", -10800],
+  ["America/Asuncion", -14400],
+  ["America/Bahia", -10800],
+  ["America/Bahia_Banderas", -21600],
+  ["America/Barbados", -14400],
+  ["America/Belem", -10800],
+  ["America/Belize", -21600],
+  ["America/Boa_Vista", -14400],
+  ["America/Bogota", -18e3],
+  ["America/Boise", -25200],
+  ["America/Cambridge_Bay", -25200],
+  ["America/Campo_Grande", -14400],
+  ["America/Cancun", -18e3],
+  ["America/Caracas", -14400],
+  ["America/Cayenne", -10800],
+  ["America/Chicago", -21600],
+  ["America/Chihuahua", -21600],
+  ["America/Ciudad_Juarez", -25200],
+  ["America/Costa_Rica", -21600],
+  ["America/Cuiaba", -14400],
+  ["America/Danmarkshavn", 0],
+  ["America/Dawson", -25200],
+  ["America/Dawson_Creek", -25200],
+  ["America/Denver", -25200],
+  ["America/Detroit", -18e3],
+  ["America/Edmonton", -25200],
+  ["America/Eirunepe", -18e3],
+  ["America/El_Salvador", -21600],
+  ["America/Fort_Nelson", -25200],
+  ["America/Fortaleza", -10800],
+  ["America/Glace_Bay", -14400],
+  ["America/Goose_Bay", -14400],
+  ["America/Grand_Turk", -18e3],
+  ["America/Guatemala", -21600],
+  ["America/Guayaquil", -18e3],
+  ["America/Guyana", -14400],
+  ["America/Halifax", -14400],
+  ["America/Havana", -18e3],
+  ["America/Hermosillo", -25200],
+  ["America/Indiana/Indianapolis", -18e3],
+  ["America/Indiana/Knox", -21600],
+  ["America/Indiana/Marengo", -18e3],
+  ["America/Indiana/Petersburg", -18e3],
+  ["America/Indiana/Tell_City", -21600],
+  ["America/Indiana/Vevay", -18e3],
+  ["America/Indiana/Vincennes", -18e3],
+  ["America/Indiana/Winamac", -18e3],
+  ["America/Inuvik", -25200],
+  ["America/Iqaluit", -18e3],
+  ["America/Jamaica", -18e3],
+  ["America/Juneau", -32400],
+  ["America/Kentucky/Louisville", -18e3],
+  ["America/Kentucky/Monticello", -18e3],
+  ["America/La_Paz", -14400],
+  ["America/Lima", -18e3],
+  ["America/Los_Angeles", -28800],
+  ["America/Maceio", -10800],
+  ["America/Managua", -21600],
+  ["America/Manaus", -14400],
+  ["America/Martinique", -14400],
+  ["America/Matamoros", -21600],
+  ["America/Mazatlan", -25200],
+  ["America/Menominee", -21600],
+  ["America/Merida", -21600],
+  ["America/Metlakatla", -32400],
+  ["America/Mexico_City", -21600],
+  ["America/Miquelon", -10800],
+  ["America/Moncton", -14400],
+  ["America/Monterrey", -21600],
+  ["America/Montevideo", -10800],
+  ["America/New_York", -18e3],
+  ["America/Nome", -32400],
+  ["America/Noronha", -7200],
+  ["America/North_Dakota/Beulah", -21600],
+  ["America/North_Dakota/Center", -21600],
+  ["America/North_Dakota/New_Salem", -21600],
+  ["America/Nuuk", -7200],
+  ["America/Ojinaga", -21600],
+  ["America/Panama", -18e3],
+  ["America/Paramaribo", -10800],
+  ["America/Phoenix", -25200],
+  ["America/Port-au-Prince", -18e3],
+  ["America/Porto_Velho", -14400],
+  ["America/Puerto_Rico", -14400],
+  ["America/Punta_Arenas", -10800],
+  ["America/Rankin_Inlet", -21600],
+  ["America/Recife", -10800],
+  ["America/Regina", -21600],
+  ["America/Resolute", -21600],
+  ["America/Rio_Branco", -18e3],
+  ["America/Santarem", -10800],
+  ["America/Santiago", -14400],
+  ["America/Santo_Domingo", -14400],
+  ["America/Sao_Paulo", -10800],
+  ["America/Scoresbysund", -7200],
+  ["America/Sitka", -32400],
+  ["America/St_Johns", -12600],
+  ["America/Swift_Current", -21600],
+  ["America/Tegucigalpa", -21600],
+  ["America/Thule", -14400],
+  ["America/Tijuana", -28800],
+  ["America/Toronto", -18e3],
+  ["America/Vancouver", -28800],
+  ["America/Whitehorse", -25200],
+  ["America/Winnipeg", -21600],
+  ["America/Yakutat", -32400],
+  ["Antarctica/Casey", 28800],
+  ["Antarctica/Davis", 25200],
+  ["Antarctica/Macquarie", 36e3],
+  ["Antarctica/Mawson", 18e3],
+  ["Antarctica/Palmer", -10800],
+  ["Antarctica/Rothera", -10800],
+  ["Antarctica/Troll", 0],
+  ["Antarctica/Vostok", 18e3],
+  ["Asia/Almaty", 18e3],
+  ["Asia/Amman", 10800],
+  ["Asia/Anadyr", 43200],
+  ["Asia/Aqtau", 18e3],
+  ["Asia/Aqtobe", 18e3],
+  ["Asia/Ashgabat", 18e3],
+  ["Asia/Atyrau", 18e3],
+  ["Asia/Baghdad", 10800],
+  ["Asia/Baku", 14400],
+  ["Asia/Bangkok", 25200],
+  ["Asia/Barnaul", 25200],
+  ["Asia/Beirut", 7200],
+  ["Asia/Bishkek", 21600],
+  ["Asia/Chita", 32400],
+  ["Asia/Choibalsan", 28800],
+  ["Asia/Colombo", 19800],
+  ["Asia/Damascus", 10800],
+  ["Asia/Dhaka", 21600],
+  ["Asia/Dili", 32400],
+  ["Asia/Dubai", 14400],
+  ["Asia/Dushanbe", 18e3],
+  ["Asia/Famagusta", 7200],
+  ["Asia/Gaza", 7200],
+  ["Asia/Hebron", 7200],
+  ["Asia/Ho_Chi_Minh", 25200],
+  ["Asia/Hong_Kong", 28800],
+  ["Asia/Hovd", 25200],
+  ["Asia/Irkutsk", 28800],
+  ["Asia/Jakarta", 25200],
+  ["Asia/Jayapura", 32400],
+  ["Asia/Jerusalem", 7200],
+  ["Asia/Kabul", 16200],
+  ["Asia/Kamchatka", 43200],
+  ["Asia/Karachi", 18e3],
+  ["Asia/Kathmandu", 20700],
+  ["Asia/Khandyga", 32400],
+  ["Asia/Kolkata", 19800],
+  ["Asia/Krasnoyarsk", 25200],
+  ["Asia/Kuching", 28800],
+  ["Asia/Macau", 28800],
+  ["Asia/Magadan", 39600],
+  ["Asia/Makassar", 28800],
+  ["Asia/Manila", 28800],
+  ["Asia/Nicosia", 7200],
+  ["Asia/Novokuznetsk", 25200],
+  ["Asia/Novosibirsk", 25200],
+  ["Asia/Omsk", 21600],
+  ["Asia/Oral", 18e3],
+  ["Asia/Pontianak", 25200],
+  ["Asia/Pyongyang", 32400],
+  ["Asia/Qatar", 10800],
+  ["Asia/Qostanay", 18e3],
+  ["Asia/Qyzylorda", 18e3],
+  ["Asia/Riyadh", 10800],
+  ["Asia/Sakhalin", 39600],
+  ["Asia/Samarkand", 18e3],
+  ["Asia/Seoul", 32400],
+  ["Asia/Shanghai", 28800],
+  ["Asia/Singapore", 28800],
+  ["Asia/Srednekolymsk", 39600],
+  ["Asia/Taipei", 28800],
+  ["Asia/Tashkent", 18e3],
+  ["Asia/Tbilisi", 14400],
+  ["Asia/Tehran", 12600],
+  ["Asia/Thimphu", 21600],
+  ["Asia/Tokyo", 32400],
+  ["Asia/Tomsk", 25200],
+  ["Asia/Ulaanbaatar", 28800],
+  ["Asia/Urumqi", 21600],
+  ["Asia/Ust-Nera", 36e3],
+  ["Asia/Vladivostok", 36e3],
+  ["Asia/Yakutsk", 32400],
+  ["Asia/Yangon", 23400],
+  ["Asia/Yekaterinburg", 18e3],
+  ["Asia/Yerevan", 14400],
+  ["Atlantic/Azores", -3600],
+  ["Atlantic/Bermuda", -14400],
+  ["Atlantic/Canary", 0],
+  ["Atlantic/Cape_Verde", -3600],
+  ["Atlantic/Faroe", 0],
+  ["Atlantic/Madeira", 0],
+  ["Atlantic/South_Georgia", -7200],
+  ["Atlantic/Stanley", -10800],
+  ["Australia/Adelaide", 34200],
+  ["Australia/Brisbane", 36e3],
+  ["Australia/Broken_Hill", 34200],
+  ["Australia/Darwin", 34200],
+  ["Australia/Eucla", 31500],
+  ["Australia/Hobart", 36e3],
+  ["Australia/Lindeman", 36e3],
+  ["Australia/Lord_Howe", 37800],
+  ["Australia/Melbourne", 36e3],
+  ["Australia/Perth", 28800],
+  ["Australia/Sydney", 36e3],
+  ["CET", 3600],
+  ["CST6CDT", -21600],
+  ["EET", 7200],
+  ["EST", -18e3],
+  ["EST5EDT", -18e3],
+  ["Etc/GMT", 0],
+  ["Etc/GMT+1", -3600],
+  ["Etc/GMT+10", -36e3],
+  ["Etc/GMT+11", -39600],
+  ["Etc/GMT+12", -43200],
+  ["Etc/GMT+2", -7200],
+  ["Etc/GMT+3", -10800],
+  ["Etc/GMT+4", -14400],
+  ["Etc/GMT+5", -18e3],
+  ["Etc/GMT+6", -21600],
+  ["Etc/GMT+7", -25200],
+  ["Etc/GMT+8", -28800],
+  ["Etc/GMT+9", -32400],
+  ["Etc/GMT-1", 3600],
+  ["Etc/GMT-10", 36e3],
+  ["Etc/GMT-11", 39600],
+  ["Etc/GMT-12", 43200],
+  ["Etc/GMT-13", 46800],
+  ["Etc/GMT-14", 50400],
+  ["Etc/GMT-2", 7200],
+  ["Etc/GMT-3", 10800],
+  ["Etc/GMT-4", 14400],
+  ["Etc/GMT-5", 18e3],
+  ["Etc/GMT-6", 21600],
+  ["Etc/GMT-7", 25200],
+  ["Etc/GMT-8", 28800],
+  ["Etc/GMT-9", 32400],
+  ["Etc/UTC", 0],
+  ["Europe/Andorra", 3600],
+  ["Europe/Astrakhan", 14400],
+  ["Europe/Athens", 7200],
+  ["Europe/Belgrade", 3600],
+  ["Europe/Berlin", 3600],
+  ["Europe/Brussels", 3600],
+  ["Europe/Bucharest", 7200],
+  ["Europe/Budapest", 3600],
+  ["Europe/Chisinau", 7200],
+  ["Europe/Dublin", 3600],
+  ["Europe/Gibraltar", 3600],
+  ["Europe/Helsinki", 7200],
+  ["Europe/Istanbul", 10800],
+  ["Europe/Kaliningrad", 7200],
+  ["Europe/Kirov", 10800],
+  ["Europe/Kyiv", 7200],
+  ["Europe/Lisbon", 0],
+  ["Europe/London", 0],
+  ["Europe/Madrid", 3600],
+  ["Europe/Malta", 3600],
+  ["Europe/Minsk", 10800],
+  ["Europe/Moscow", 10800],
+  ["Europe/Paris", 3600],
+  ["Europe/Prague", 3600],
+  ["Europe/Riga", 7200],
+  ["Europe/Rome", 3600],
+  ["Europe/Samara", 14400],
+  ["Europe/Saratov", 14400],
+  ["Europe/Simferopol", 10800],
+  ["Europe/Sofia", 7200],
+  ["Europe/Tallinn", 7200],
+  ["Europe/Tirane", 3600],
+  ["Europe/Ulyanovsk", 14400],
+  ["Europe/Vienna", 3600],
+  ["Europe/Vilnius", 7200],
+  ["Europe/Volgograd", 10800],
+  ["Europe/Warsaw", 3600],
+  ["Europe/Zurich", 3600],
+  ["HST", -36e3],
+  ["Indian/Chagos", 21600],
+  ["Indian/Maldives", 18e3],
+  ["Indian/Mauritius", 14400],
+  ["MET", 3600],
+  ["MST", -25200],
+  ["MST7MDT", -25200],
+  ["PST8PDT", -28800],
+  ["Pacific/Apia", 46800],
+  ["Pacific/Auckland", 43200],
+  ["Pacific/Bougainville", 39600],
+  ["Pacific/Chatham", 45900],
+  ["Pacific/Easter", -21600],
+  ["Pacific/Efate", 39600],
+  ["Pacific/Fakaofo", 46800],
+  ["Pacific/Fiji", 43200],
+  ["Pacific/Galapagos", -21600],
+  ["Pacific/Gambier", -32400],
+  ["Pacific/Guadalcanal", 39600],
+  ["Pacific/Guam", 36e3],
+  ["Pacific/Honolulu", -36e3],
+  ["Pacific/Kanton", 46800],
+  ["Pacific/Kiritimati", 50400],
+  ["Pacific/Kosrae", 39600],
+  ["Pacific/Kwajalein", 43200],
+  ["Pacific/Marquesas", -34200],
+  ["Pacific/Nauru", 43200],
+  ["Pacific/Niue", -39600],
+  ["Pacific/Norfolk", 39600],
+  ["Pacific/Noumea", 39600],
+  ["Pacific/Pago_Pago", -39600],
+  ["Pacific/Palau", 32400],
+  ["Pacific/Pitcairn", -28800],
+  ["Pacific/Port_Moresby", 36e3],
+  ["Pacific/Rarotonga", -36e3],
+  ["Pacific/Tahiti", -36e3],
+  ["Pacific/Tarawa", 43200],
+  ["Pacific/Tongatapu", 46800],
+  ["WET", 0]
+]);
+
+// build/dev/javascript/birl/birl_ffi.mjs
+function to_parts(timestamp, offset) {
+  const date = new Date((timestamp + offset) / 1e3);
+  return [
+    [date.getUTCFullYear(), date.getUTCMonth() + 1, date.getUTCDate()],
+    [
+      date.getUTCHours(),
+      date.getUTCMinutes(),
+      date.getUTCSeconds(),
+      date.getUTCMilliseconds()
+    ]
+  ];
+}
+
+// build/dev/javascript/birl/birl.mjs
+var Time = class extends CustomType {
+  constructor(wall_time, offset, timezone, monotonic_time) {
+    super();
+    this.wall_time = wall_time;
+    this.offset = offset;
+    this.timezone = timezone;
+    this.monotonic_time = monotonic_time;
+  }
+};
+var Mon = class extends CustomType {
+};
+var Tue = class extends CustomType {
+};
+var Wed = class extends CustomType {
+};
+var Thu = class extends CustomType {
+};
+var Fri = class extends CustomType {
+};
+var Sat = class extends CustomType {
+};
+var Sun = class extends CustomType {
+};
+var Jan = class extends CustomType {
+};
+var Feb = class extends CustomType {
+};
+var Mar = class extends CustomType {
+};
+var Apr = class extends CustomType {
+};
+var May = class extends CustomType {
+};
+var Jun = class extends CustomType {
+};
+var Jul = class extends CustomType {
+};
+var Aug = class extends CustomType {
+};
+var Sep = class extends CustomType {
+};
+var Oct = class extends CustomType {
+};
+var Nov = class extends CustomType {
+};
+var Dec = class extends CustomType {
+};
+function from_unix(value3) {
+  return new Time(value3 * 1e6, 0, new None(), new None());
+}
+function generate_offset(offset) {
+  return guard(
+    offset === 0,
+    new Ok("Z"),
+    () => {
+      let $ = (() => {
+        let _pipe = toList([[offset, new MicroSecond()]]);
+        let _pipe$1 = new$2(_pipe);
+        return decompose(_pipe$1);
+      })();
+      if ($.hasLength(2) && $.head[1] instanceof Hour && $.tail.head[1] instanceof Minute) {
+        let hour2 = $.head[0];
+        let minute2 = $.tail.head[0];
+        let _pipe = toList([
+          (() => {
+            let $1 = hour2 > 0;
+            if ($1) {
+              return concat3(
+                toList([
+                  "+",
+                  (() => {
+                    let _pipe2 = hour2;
+                    let _pipe$12 = to_string2(_pipe2);
+                    return pad_left(_pipe$12, 2, "0");
+                  })()
+                ])
+              );
+            } else {
+              return concat3(
+                toList([
+                  "-",
+                  (() => {
+                    let _pipe2 = hour2;
+                    let _pipe$12 = absolute_value(_pipe2);
+                    let _pipe$2 = to_string2(_pipe$12);
+                    return pad_left(_pipe$2, 2, "0");
+                  })()
+                ])
+              );
+            }
+          })(),
+          (() => {
+            let _pipe2 = minute2;
+            let _pipe$12 = absolute_value(_pipe2);
+            let _pipe$2 = to_string2(_pipe$12);
+            return pad_left(_pipe$2, 2, "0");
+          })()
+        ]);
+        let _pipe$1 = join2(_pipe, ":");
+        return new Ok(_pipe$1);
+      } else if ($.hasLength(1) && $.head[1] instanceof Hour) {
+        let hour2 = $.head[0];
+        let _pipe = toList([
+          (() => {
+            let $1 = hour2 > 0;
+            if ($1) {
+              return concat3(
+                toList([
+                  "+",
+                  (() => {
+                    let _pipe2 = hour2;
+                    let _pipe$12 = to_string2(_pipe2);
+                    return pad_left(_pipe$12, 2, "0");
+                  })()
+                ])
+              );
+            } else {
+              return concat3(
+                toList([
+                  "-",
+                  (() => {
+                    let _pipe2 = hour2;
+                    let _pipe$12 = absolute_value(_pipe2);
+                    let _pipe$2 = to_string2(_pipe$12);
+                    return pad_left(_pipe$2, 2, "0");
+                  })()
+                ])
+              );
+            }
+          })(),
+          "00"
+        ]);
+        let _pipe$1 = join2(_pipe, ":");
+        return new Ok(_pipe$1);
+      } else {
+        return new Error(void 0);
+      }
+    }
+  );
+}
+function to_parts2(value3) {
+  let t = value3.wall_time;
+  let o = value3.offset;
+  let $ = to_parts(t, o);
+  let date = $[0];
+  let time = $[1];
+  let $1 = generate_offset(o);
+  if (!$1.isOk()) {
+    throw makeError(
+      "assignment_no_match",
+      "birl",
+      1318,
+      "to_parts",
+      "Assignment pattern did not match",
+      { value: $1 }
+    );
+  }
+  let offset = $1[0];
+  return [date, time, offset];
+}
+function to_naive(value3) {
+  let $ = to_parts2(value3);
+  let year2 = $[0][0];
+  let month$1 = $[0][1];
+  let day2 = $[0][2];
+  let hour2 = $[1][0];
+  let minute2 = $[1][1];
+  let second3 = $[1][2];
+  let milli_second2 = $[1][3];
+  return to_string2(year2) + "-" + (() => {
+    let _pipe = month$1;
+    let _pipe$1 = to_string2(_pipe);
+    return pad_left(_pipe$1, 2, "0");
+  })() + "-" + (() => {
+    let _pipe = day2;
+    let _pipe$1 = to_string2(_pipe);
+    return pad_left(_pipe$1, 2, "0");
+  })() + "T" + (() => {
+    let _pipe = hour2;
+    let _pipe$1 = to_string2(_pipe);
+    return pad_left(_pipe$1, 2, "0");
+  })() + ":" + (() => {
+    let _pipe = minute2;
+    let _pipe$1 = to_string2(_pipe);
+    return pad_left(_pipe$1, 2, "0");
+  })() + ":" + (() => {
+    let _pipe = second3;
+    let _pipe$1 = to_string2(_pipe);
+    return pad_left(_pipe$1, 2, "0");
+  })() + "." + (() => {
+    let _pipe = milli_second2;
+    let _pipe$1 = to_string2(_pipe);
+    return pad_left(_pipe$1, 3, "0");
+  })();
+}
+var unix_epoch = new Time(0, 0, new None(), new None());
+var string_to_units = toList([
+  ["year", new Year()],
+  ["month", new Month()],
+  ["week", new Week()],
+  ["day", new Day()],
+  ["hour", new Hour()],
+  ["minute", new Minute()],
+  ["second", new Second()]
+]);
+var units_to_string = toList([
+  [new Year(), "year"],
+  [new Month(), "month"],
+  [new Week(), "week"],
+  [new Day(), "day"],
+  [new Hour(), "hour"],
+  [new Minute(), "minute"],
+  [new Second(), "second"]
+]);
+var weekday_strings = toList([
+  [new Mon(), ["Monday", "Mon"]],
+  [new Tue(), ["Tuesday", "Tue"]],
+  [new Wed(), ["Wednesday", "Wed"]],
+  [new Thu(), ["Thursday", "Thu"]],
+  [new Fri(), ["Friday", "Fri"]],
+  [new Sat(), ["Saturday", "Sat"]],
+  [new Sun(), ["Sunday", "Sun"]]
+]);
+var month_strings = toList([
+  [new Jan(), ["January", "Jan"]],
+  [new Feb(), ["February", "Feb"]],
+  [new Mar(), ["March", "Mar"]],
+  [new Apr(), ["April", "Apr"]],
+  [new May(), ["May", "May"]],
+  [new Jun(), ["June", "Jun"]],
+  [new Jul(), ["July", "Jul"]],
+  [new Aug(), ["August", "Aug"]],
+  [new Sep(), ["September", "Sep"]],
+  [new Oct(), ["October", "Oct"]],
+  [new Nov(), ["November", "Nov"]],
+  [new Dec(), ["December", "Dec"]]
+]);
 
 // build/dev/javascript/gleam_stdlib/gleam/io.mjs
 function debug(term) {
@@ -1637,7 +2752,7 @@ function json_to_string(json) {
 function object(entries) {
   return Object.fromEntries(entries);
 }
-function identity2(x) {
+function identity3(x) {
   return x;
 }
 function decode(string3) {
@@ -1764,7 +2879,7 @@ function to_string5(json) {
   return json_to_string(json);
 }
 function string2(input2) {
-  return identity2(input2);
+  return identity3(input2);
 }
 function object2(entries) {
   return object(entries);
@@ -1807,15 +2922,6 @@ function decoder() {
     field("unix_date", int),
     field("author", string)
   );
-}
-
-// build/dev/javascript/gleam_stdlib/gleam/bool.mjs
-function guard(requirement, consequence, alternative) {
-  if (requirement) {
-    return consequence;
-  } else {
-    return alternative();
-  }
 }
 
 // build/dev/javascript/lustre/lustre/effect.mjs
@@ -1876,11 +2982,17 @@ function attribute(name, value3) {
 function on(name, handler) {
   return new Event("on" + name, handler);
 }
+function class$(name) {
+  return attribute("class", name);
+}
+function type_(name) {
+  return attribute("type", name);
+}
 function value(val) {
   return attribute("value", val);
 }
-function src(uri) {
-  return attribute("src", uri);
+function placeholder(text2) {
+  return attribute("placeholder", text2);
 }
 
 // build/dev/javascript/lustre/lustre/element.mjs
@@ -2192,9 +3304,9 @@ function diffKeyedChild(prevChild, child, el2, stack, incomingKeyedChildren, key
     return prevChild;
   }
   if (!keyedChild && prevChild !== null) {
-    const placeholder = document.createTextNode("");
-    el2.insertBefore(placeholder, prevChild);
-    stack.unshift({ prev: placeholder, next: child, parent: el2 });
+    const placeholder2 = document.createTextNode("");
+    el2.insertBefore(placeholder2, prevChild);
+    stack.unshift({ prev: placeholder2, next: child, parent: el2 });
     return prevChild;
   }
   if (!keyedChild || keyedChild === prevChild) {
@@ -2380,9 +3492,6 @@ function start3(app, selector, flags) {
 function div(attrs, children) {
   return element("div", attrs, children);
 }
-function img(attrs) {
-  return element("img", attrs, toList([]));
-}
 function button(attrs, children) {
   return element("button", attrs, children);
 }
@@ -2469,24 +3578,24 @@ function noneify_empty_string(x) {
 }
 function extra_required(loop$list, loop$remaining) {
   while (true) {
-    let list2 = loop$list;
+    let list3 = loop$list;
     let remaining = loop$remaining;
     if (remaining === 0) {
       return 0;
-    } else if (list2.hasLength(0)) {
+    } else if (list3.hasLength(0)) {
       return remaining;
     } else {
-      let xs = list2.tail;
+      let xs = list3.tail;
       loop$list = xs;
       loop$remaining = remaining - 1;
     }
   }
 }
-function pad_list(list2, size) {
-  let _pipe = list2;
+function pad_list(list3, size) {
+  let _pipe = list3;
   return append(
     _pipe,
-    repeat(new None(), extra_required(list2, size))
+    repeat(new None(), extra_required(list3, size))
   );
 }
 function split_authority(authority) {
@@ -3078,8 +4187,6 @@ var Model = class extends CustomType {
     this.input_author = input_author;
   }
 };
-var UserGetMessages = class extends CustomType {
-};
 var UserUpdatedMessage = class extends CustomType {
   constructor(x0) {
     super();
@@ -3094,12 +4201,6 @@ var UserUpdatedAuthor = class extends CustomType {
 };
 var UserSendMessage = class extends CustomType {
 };
-var ApiReturnedMessage = class extends CustomType {
-  constructor(x0) {
-    super();
-    this[0] = x0;
-  }
-};
 var ApiReturnedMessages = class extends CustomType {
   constructor(x0) {
     super();
@@ -3112,12 +4213,6 @@ var ApiReturnedPostMessage = class extends CustomType {
     this[0] = x0;
   }
 };
-function init2(_) {
-  return [
-    new Model(0, toList([]), toList([]), "Enter a message", "Your name"),
-    none()
-  ];
-}
 function get_messages() {
   let decoder2 = list(decoder());
   let expect = expect_json(
@@ -3127,6 +4222,9 @@ function get_messages() {
     }
   );
   return get2("http://localhost:8000/messages", expect);
+}
+function init2(_) {
+  return [new Model(0, toList([]), toList([]), "", ""), get_messages()];
 }
 function post_message(input_message, input_author) {
   let m = new InputMessage(input_message, input_author);
@@ -3141,9 +4239,7 @@ function post_message(input_message, input_author) {
   );
 }
 function update2(model, msg) {
-  if (msg instanceof UserGetMessages) {
-    return [model, get_messages()];
-  } else if (msg instanceof UserUpdatedMessage) {
+  if (msg instanceof UserUpdatedMessage) {
     let input2 = msg[0];
     debug(input2);
     return [model.withFields({ input_message: input2 }), none()];
@@ -3153,33 +4249,44 @@ function update2(model, msg) {
     return [model.withFields({ input_author: input2 }), none()];
   } else if (msg instanceof UserSendMessage) {
     return [model, post_message(model.input_message, model.input_author)];
-  } else if (msg instanceof ApiReturnedMessage && msg[0].isOk()) {
-    let msg$1 = msg[0][0];
-    debug(msg$1);
-    return [model, none()];
   } else if (msg instanceof ApiReturnedMessages && msg[0].isOk()) {
     let msgs = msg[0][0];
     debug(msgs);
     return [model.withFields({ messages: msgs }), none()];
   } else if (msg instanceof ApiReturnedPostMessage && msg[0].isOk()) {
     debug("posted");
-    return [model, none()];
-  } else if (msg instanceof ApiReturnedMessage && !msg[0].isOk()) {
-    return [model, none()];
+    return [model, get_messages()];
   } else if (msg instanceof ApiReturnedMessages && !msg[0].isOk()) {
     return [model, none()];
   } else {
     return [model, none()];
   }
 }
-function messages_h(messages) {
+function messages_view(messages) {
   let message_h = (message) => {
     return div(
-      toList([]),
+      toList([class$("flex m-1")]),
       toList([
-        text(message.text),
-        text(" "),
-        text(message.author)
+        div(
+          toList([class$("w-1/3 px-2")]),
+          toList([
+            text(
+              (() => {
+                let _pipe = message.unix_date;
+                let _pipe$1 = from_unix(_pipe);
+                return to_naive(_pipe$1);
+              })()
+            )
+          ])
+        ),
+        div(
+          toList([class$("w-1/3 px-2")]),
+          toList([text(message.text)])
+        ),
+        div(
+          toList([class$("w-1/3 px-2")]),
+          toList([text(message.author)])
+        )
       ])
     );
   };
@@ -3187,44 +4294,67 @@ function messages_h(messages) {
 }
 function view(model) {
   return div(
-    toList([]),
+    toList([class$("flex flex-col")]),
     toList([
-      input(
-        toList([
-          value(model.input_message),
-          on_input((var0) => {
-            return new UserUpdatedMessage(var0);
-          })
-        ])
-      ),
-      input(
-        toList([
-          value(model.input_author),
-          on_input((var0) => {
-            return new UserUpdatedAuthor(var0);
-          })
-        ])
-      ),
-      button(
-        toList([on_click(new UserSendMessage())]),
-        toList([text("Send")])
-      ),
-      button(
-        toList([on_click(new UserGetMessages())]),
-        toList([text("Update messages")])
-      ),
       div(
-        toList([]),
-        map2(
-          model.cats,
-          (cat) => {
-            return img(
-              toList([src("https://cataas.com/cat/" + cat)])
-            );
-          }
-        )
+        toList([class$("flex")]),
+        toList([
+          div(
+            toList([class$("w-1/3 px-2")]),
+            toList([
+              input(
+                toList([
+                  class$(
+                    "shadow appearance-none border rounded py-2 px-3 text-gray-700"
+                  ),
+                  value(model.input_message),
+                  placeholder("Your message"),
+                  on_input(
+                    (var0) => {
+                      return new UserUpdatedMessage(var0);
+                    }
+                  )
+                ])
+              )
+            ])
+          ),
+          div(
+            toList([class$("w-1/3 px-2")]),
+            toList([
+              input(
+                toList([
+                  class$(
+                    "shadow appearance-none border rounded py-2 px-3 text-gray-700"
+                  ),
+                  value(model.input_author),
+                  placeholder("Your Name"),
+                  on_input(
+                    (var0) => {
+                      return new UserUpdatedAuthor(var0);
+                    }
+                  )
+                ])
+              )
+            ])
+          ),
+          div(
+            toList([class$("w-1/3 px-2")]),
+            toList([
+              button(
+                toList([
+                  type_("button"),
+                  class$(
+                    "bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
+                  ),
+                  on_click(new UserSendMessage())
+                ]),
+                toList([text("Send")])
+              )
+            ])
+          )
+        ])
       ),
-      messages_h(model.messages)
+      div(toList([]), toList([messages_view(model.messages)]))
     ])
   );
 }
@@ -3235,7 +4365,7 @@ function main() {
     throw makeError(
       "assignment_no_match",
       "guestbook_front",
-      16,
+      17,
       "main",
       "Assignment pattern did not match",
       { value: $ }
